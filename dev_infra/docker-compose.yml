@@ -1,0 +1,81 @@
+services:
+  #  Metrics collector.
+  #  It scrapes targets defined in --promscrape.config
+  #  And forward them to --remoteWrite.url
+  vmagent:
+    container_name: vmagent
+    image: victoriametrics/vmagent:v1.101.0
+    depends_on:
+      - "victoriametrics"
+    ports:
+      - 8429:8429
+    volumes:
+      - vmagentdata:/vmagentdata
+      - ./vmconfigs/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--promscrape.config=/etc/prometheus/prometheus.yml"
+      - "--remoteWrite.url=http://victoriametrics:8428/api/v1/write"
+    networks:
+      - vm_net
+    restart: always
+
+  # VictoriaMetrics instance, a single process responsible for
+  # storing metrics and serve read requests.
+  victoriametrics:
+    container_name: victoriametrics
+    image: victoriametrics/victoria-metrics:v1.101.0
+    ports:
+      - 8428:8428
+    volumes:
+      - vmdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+    networks:
+      - vm_net
+    restart: always
+
+  # Grafana instance configured with VictoriaMetrics as datasource
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:10.3.1
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: [ "chmod +x /download.sh && /download.sh && /run.sh" ]
+    environment:
+      - GF_INSTALL_PLUGINS=https://github.com/VictoriaMetrics/grafana-datasource/releases/download/v0.8.2/victoriametrics-datasource-v0.8.2.zip;victoriametrics-datasource
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victoriametrics-datasource
+    depends_on:
+      - "victoriametrics"
+    ports:
+      - 3000:3000
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./vmconfigs/provisioning/datasources/:/etc/grafana/provisioning/datasources
+      - ./vmconfigs/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./vmconfigs/dashboards/:/var/lib/grafana/dashboards/
+      - ./vmconfigs/download.sh:/download.sh
+    networks:
+      - vm_net
+    restart: always
+  
+  checker:
+    container_name: checker
+    build:
+      dockerfile: ./dev_infra/checker/Dockerfile
+      context: ../
+    volumes:
+      - ../src/cmd/checker/config_example.yaml:/config.yaml
+    restart: always
+    ports:
+      - 15559:15559
+      - 14448:14448
+    networks:
+      - vm_net
+
+volumes:
+  vmagentdata: {}
+  vmdata: {}
+  grafanadata: {}
+
+networks:
+  vm_net:
