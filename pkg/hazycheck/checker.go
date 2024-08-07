@@ -29,6 +29,14 @@ type SLA struct {
 	SuccessfullAttempts int
 }
 
+// CheckerID is a struct containing information about what checker is responsible for.
+// Every checker checks only one service, and has a name, usually name
+// is just a user flow, for example stupido_user_flow.
+type CheckerID struct {
+	Service string
+	Name    string
+}
+
 // Checker is an interface, which must be implemented by every keep-alive checker.
 // Checker will be called like this: initially Checker.Check will be called. Check method
 // will be called very frequently. It need's to be concurrently safe.
@@ -54,6 +62,6 @@ type Checker interface {
 	// consistency over time.
 	Get(ctx context.Context, target string, data []byte) error
 
-	// Name of the service. This method is used for internal checker registration.
-	ServiceName() string
+	// CheckerID returns the id of the checker. This method is used for internal checker registration.
+	CheckerID() CheckerID
 }

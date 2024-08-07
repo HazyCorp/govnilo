@@ -34,36 +34,42 @@ func (s *serviceRuntimeState) Clone() serviceRuntimeState {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type storageState struct {
-	Services map[string]serviceRuntimeState
-	Routines ServicesContestState
+	CheckerRuntimeStates map[string]serviceRuntimeState
+	ControllerState      State
 
-	initOnce sync.Once
+	initialized bool
 }
 
+// method is written to avoid nil reference exceptions
+// on map usages
 func (s *storageState) init() {
-	s.initOnce.Do(func() {
-		if s.Services == nil {
-			s.Services = make(map[string]serviceRuntimeState)
-		}
-		if s.Routines.Services == nil {
-			s.Routines.Services = make(map[string]ServiceCheckerState)
-		}
-	})
+	if s.initialized {
+		return
+	}
+
+	if s.CheckerRuntimeStates == nil {
+		s.CheckerRuntimeStates = make(map[string]serviceRuntimeState)
+	}
+	if s.ControllerState.Services == nil {
+		s.ControllerState.Services = make(map[string]ServiceState)
+	}
+
+	s.initialized = true
 }
 
 func (s *storageState) Clone() storageState {
 	services := make(map[string]serviceRuntimeState)
-	for k, v := range s.Services {
+	for k, v := range s.CheckerRuntimeStates {
 		services[k] = v
 	}
 
-	return storageState{Services: services, Routines: s.Routines.Clone()}
+	return storageState{CheckerRuntimeStates: services, ControllerState: s.ControllerState.Clone()}
 }
 
 func (s *storageState) GetServiceSLA(serviceName string) (*ServiceSLA, error) {
 	s.init()
 
-	serviceState, exists := s.Services[serviceName]
+	serviceState, exists := s.CheckerRuntimeStates[serviceName]
 	if !exists {
 		return nil, errors.Errorf("cannot find service in file")
 	}
@@ -77,9 +83,9 @@ func (s *storageState) AppendServiceCheck(
 ) (*ServiceSLA, error) {
 	s.init()
 
-	serviceState, exists := s.Services[serviceName]
+	serviceState, exists := s.CheckerRuntimeStates[serviceName]
 	if !exists {
-		s.Services[serviceName] = serviceRuntimeState{}
+		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
 	}
 
 	sla := &serviceState.SLA
@@ -88,34 +94,34 @@ func (s *storageState) AppendServiceCheck(
 	}
 	sla.TotalAttempts++
 
-	s.Services[serviceName] = serviceState
+	s.CheckerRuntimeStates[serviceName] = serviceState
 	return sla, nil
 }
 
-func (s *storageState) GetContestState() *ServicesContestState {
+func (s *storageState) GetContestState() *State {
 	s.init()
 
-	clone := s.Routines.Clone()
+	clone := s.ControllerState.Clone()
 	return &clone
 }
 
-func (s *storageState) SetContestState(newState *ServicesContestState) {
+func (s *storageState) SetContestState(newState *State) {
 	s.init()
 
-	s.Routines = newState.Clone()
+	s.ControllerState = newState.Clone()
 }
 
 func (s *storageState) AppendCheckerData(serviceName string, data []byte) error {
 	s.init()
 
-	svc, exists := s.Services[serviceName]
+	svc, exists := s.CheckerRuntimeStates[serviceName]
 	if !exists {
-		s.Services[serviceName] = serviceRuntimeState{}
-		svc = s.Services[serviceName]
+		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
+		svc = s.CheckerRuntimeStates[serviceName]
 	}
 
 	svc.CheckerDataPool = append(svc.CheckerDataPool, data)
-	s.Services[serviceName] = svc
+	s.CheckerRuntimeStates[serviceName] = svc
 
 	return nil
 }
@@ -123,10 +129,10 @@ func (s *storageState) AppendCheckerData(serviceName string, data []byte) error 
 func (s *storageState) GetCheckerDataPool(serviceName string) ([][]byte, error) {
 	s.init()
 
-	svc, exists := s.Services[serviceName]
+	svc, exists := s.CheckerRuntimeStates[serviceName]
 	if !exists {
-		s.Services[serviceName] = serviceRuntimeState{}
-		svc = s.Services[serviceName]
+		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
+		svc = s.CheckerRuntimeStates[serviceName]
 	}
 	svc = svc.Clone()
 
@@ -136,7 +142,7 @@ func (s *storageState) GetCheckerDataPool(serviceName string) ([][]byte, error) 
 func (s *storageState) RemoveDataFromPool(serviceName string, idx uint64) ([]byte, error) {
 	s.init()
 
-	svc, exists := s.Services[serviceName]
+	svc, exists := s.CheckerRuntimeStates[serviceName]
 	if !exists {
 		return nil, errors.Wrap(hazyerr.ErrNotFound, "service not known")
 	}
@@ -264,7 +270,7 @@ func (s *FileStorage) RemoveDataFromPool(
 	return data, nil
 }
 
-func (s *FileStorage) GetContestState(ctx context.Context) (*ServicesContestState, error) {
+func (s *FileStorage) GetContestState(ctx context.Context) (*State, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -276,7 +282,7 @@ func (s *FileStorage) GetContestState(ctx context.Context) (*ServicesContestStat
 	return state.GetContestState(), nil
 }
 
-func (s *FileStorage) SetContestState(ctx context.Context, newState *ServicesContestState) error {
+func (s *FileStorage) SetContestState(ctx context.Context, newState *State) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -389,7 +395,7 @@ func (s *AsyncFileStore) AppendServiceCheck(
 	return s.currentState.AppendServiceCheck(serviceName, successfull)
 }
 
-func (s *AsyncFileStore) GetContestState(ctx context.Context) (*ServicesContestState, error) {
+func (s *AsyncFileStore) GetContestState(ctx context.Context) (*State, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -398,7 +404,7 @@ func (s *AsyncFileStore) GetContestState(ctx context.Context) (*ServicesContestS
 
 func (s *AsyncFileStore) SetContestState(
 	ctx context.Context,
-	newState *ServicesContestState,
+	newState *State,
 ) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

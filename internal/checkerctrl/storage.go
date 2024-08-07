@@ -2,8 +2,42 @@ package checkerctrl
 
 import (
 	"context"
+	"maps"
 	"time"
+
+	"github.com/HazyCorp/checker/pkg/hazycheck"
 )
+
+// example state (represented in yaml)
+// ...
+// state:
+//   services:
+//     example:
+//       target: 'localhost:8080'
+//       checkers:
+//         simple_user_flow:
+//           check:
+//             rate:
+//               times: 500
+//               per: 1s
+//           get:
+//             rate:
+//               times: 5
+//               per: 1s
+//         user_with_big_payload:
+//           check:
+//             rate:
+//               times: 5
+//               per: 1m
+//            get:
+//              rate:
+//                times: 1
+//                per: 1h
+//       sploits:
+//         drop_database_sql_injection:
+//           rate:
+//             times: 1
+//             per: 1s
 
 type Rate struct {
 	Times uint64
@@ -14,42 +48,48 @@ type SploitState struct {
 	Rate Rate
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type ServiceCheckerState struct {
-	Target    string
-	CheckRate Rate
-	GetRate   Rate
-	Sploits   map[string]SploitState
+type CheckerState struct {
+	Check CheckerCheckState
+	Get   CheckerGetState
 }
 
-func (s *ServiceCheckerState) Clone() ServiceCheckerState {
-	sploits := make(map[string]SploitState, len(s.Sploits))
-	for k, v := range s.Sploits {
-		sploits[k] = v
-	}
+type CheckerGetState struct {
+	Rate Rate
+}
 
-	return ServiceCheckerState{
-		CheckRate: s.CheckRate,
-		GetRate:   s.GetRate,
-		Sploits:   sploits,
-		Target:    s.Target,
-	}
+type CheckerCheckState struct {
+	Rate Rate
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type ServicesContestState struct {
-	Services map[string]ServiceCheckerState
+type ServiceState struct {
+	Target   string
+	Checkers map[string]CheckerState
+	Sploits  map[string]SploitState
 }
 
-func (s *ServicesContestState) Clone() ServicesContestState {
-	services := make(map[string]ServiceCheckerState, len(s.Services))
+func (s *ServiceState) Clone() ServiceState {
+	return ServiceState{
+		Target:   s.Target,
+		Checkers: maps.Clone(s.Checkers),
+		Sploits:  maps.Clone(s.Sploits),
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type State struct {
+	Services map[string]ServiceState
+}
+
+func (s *State) Clone() State {
+	services := make(map[string]ServiceState, len(s.Services))
 	for k, v := range s.Services {
 		services[k] = v.Clone()
 	}
 
-	return ServicesContestState{Services: services}
+	return State{Services: services}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,19 +102,23 @@ type ServiceSLA struct {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type ControllerStorage interface {
-	GetServiceSLA(ctx context.Context, serviceName string) (*ServiceSLA, error)
-	AppendServiceCheck(
+	GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*ServiceSLA, error)
+	AppendCheck(
 		ctx context.Context,
-		serviceName string,
+		checkerID hazycheck.CheckerID,
 		successfull bool,
 	) (*ServiceSLA, error)
 
-	AppendCheckerData(ctx context.Context, serviceName string, data []byte) error
-	GetCheckerDataPool(ctx context.Context, serviceName string) ([][]byte, error)
-	RemoveDataFromPool(ctx context.Context, servicieName string, idx uint64) ([]byte, error)
+	AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error
+	GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error)
+	RemoveDataFromPool(
+		ctx context.Context,
+		checkerID hazycheck.CheckerID,
+		idx uint64,
+	) ([]byte, error)
 
-	GetContestState(ctx context.Context) (*ServicesContestState, error)
-	SetContestState(ctx context.Context, newState *ServicesContestState) error
+	GetContestState(ctx context.Context) (*State, error)
+	SetContestState(ctx context.Context, newState *State) error
 
 	Flush(ctx context.Context) error
 }

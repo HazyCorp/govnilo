@@ -1,32 +1,32 @@
 syntax = "proto3";
 
-option go_package = "pb";
+option go_package = "github.com/HazyCorp/checker;pb";
 
 import "google/protobuf/duration.proto";
 
-package pb;
+package checker.proto;
 
 service CheckerService {
-    rpc SetCheckerState(SetCheckerStateReq) returns (SetCheckerStateRsp);
-    rpc GetCheckerState(GetCheckerStateReq) returns (GetCheckerStateRsp);
+    rpc SetState(SetStateReq) returns (SetStateRsp);
+    rpc GetState(GetStateReq) returns (GetStateRsp);
 
     rpc GetSLA(GetSLAReq) returns (GetSLAResponse);
 }
 
-message SetCheckerStateReq {
-    CheckerState state = 1;
+message SetStateReq {
+    State state = 1;
 }
 
-message SetCheckerStateRsp {
+message SetStateRsp {
     // empty
 }
 
-message GetCheckerStateReq {
+message GetStateReq {
     // emtpy
 }
 
-message GetCheckerStateRsp {
-    CheckerState state = 1;
+message GetStateRsp {
+    State state = 1;
 }
 
 message GetSLAReq {
@@ -34,6 +34,10 @@ message GetSLAReq {
 }
 
 message GetSLAResponse {
+  map<string, ServiceSLA> slas = 1;
+}
+
+message ServiceSLA {
   map<string, SLA> slas = 1;
 }
 
@@ -42,14 +46,14 @@ message SLA {
   uint64 total_count = 2;
 }
 
-message CheckerState {
+message State {
     map<string, ServiceState> services = 1;
 }
 
 message ServiceState {
     string target = 1;
-    CheckState check_state = 2;
-    map<string, SploitState> sploits_state = 3;
+    map<string, CheckerState> checkers = 2;
+    map<string, SploitState> sploits = 3;
 }
 
 message Rate {
@@ -57,9 +61,17 @@ message Rate {
     google.protobuf.Duration per = 2;
 }
 
+message CheckerState {
+    CheckState check = 1;
+    GetState get = 2;
+}
+
 message CheckState {
-    Rate checker_check_rate = 1;
-    Rate checker_get_rate = 2;
+    Rate rate = 1;
+}
+
+message GetState {
+    Rate rate = 1;
 }
 
 message SploitState {

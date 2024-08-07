@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -18,35 +17,13 @@ import (
 	"github.com/HazyCorp/checker/pkg/hazycheck"
 )
 
-type checherMetrics struct {
-	SuccessCheckCounter *metrics.Counter
-	FailCheckCounter    *metrics.Counter
-
-	SuccessGetCounter *metrics.Counter
-	FailGetCounter    *metrics.Counter
-
-	SuccessCheckDuration *metrics.Histogram
-	FailCheckDuration    *metrics.Histogram
-
-	SuccessGetDuration *metrics.Histogram
-	FailGetDuration    *metrics.Histogram
-}
-
-type sploitMetrics struct {
-	SuccessCounter *metrics.Counter
-	FailCounter    *metrics.Counter
-
-	SuccessDuration *metrics.Histogram
-	FailDuration    *metrics.Histogram
-}
-
 type Config struct {
 	SyncInterval time.Duration `json:"sync_interval" yaml:"sync_interval"`
 }
 
 type Controller struct {
 	l                  *zap.Logger
-	registeredCheckers map[string]hazycheck.Checker
+	registeredCheckers map[hazycheck.CheckerID]hazycheck.Checker
 	registeredSploits  map[hazycheck.SploitID]hazycheck.Sploit
 	storage            ControllerStorage
 	conf               Config
@@ -57,7 +34,7 @@ type Controller struct {
 	runErrChan chan error
 
 	checkerMetricsMu sync.RWMutex
-	checkerMetrics   map[string]*checherMetrics
+	checkerMetrics   map[hazycheck.CheckerID]*checkerMetrics
 
 	sploitMetricsMu sync.RWMutex
 	sploitMetrics   map[hazycheck.SploitID]*sploitMetrics
@@ -77,9 +54,9 @@ type ControllerIn struct {
 }
 
 func New(in ControllerIn) *Controller {
-	nameToChecker := make(map[string]hazycheck.Checker, len(in.Checkers))
+	idToChecker := make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers))
 	for _, check := range in.Checkers {
-		nameToChecker[check.ServiceName()] = check
+		idToChecker[check.CheckerID()] = check
 	}
 
 	idToSploit := make(map[hazycheck.SploitID]hazycheck.Sploit, len(in.Sploits))
@@ -89,14 +66,14 @@ func New(in ControllerIn) *Controller {
 
 	return &Controller{
 		l:                  in.Logger,
-		registeredCheckers: nameToChecker,
+		registeredCheckers: idToChecker,
 		registeredSploits:  idToSploit,
 		storage:            in.Storage,
 		rr:                 raterunner.New(in.Logger),
 		conf:               in.Config,
 		runErrChan:         make(chan error, 1),
 		strategy:           in.Strategy,
-		checkerMetrics:     make(map[string]*checherMetrics),
+		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics),
 		sploitMetrics:      make(map[hazycheck.SploitID]*sploitMetrics),
 	}
 }
@@ -189,9 +166,9 @@ func (c *Controller) genSploitRunAttackTask(
 
 func (c *Controller) genCheckerCheckTask(
 	checker hazycheck.Checker,
-	svc *ServiceCheckerState,
+	svc *ServiceState,
 ) raterunner.TaskFunc {
-	m := c.checkerMetricsFor(checker.ServiceName())
+	m := c.checkerMetricsFor(checker.CheckerID())
 
 	return func(ctx context.Context) error {
 		start := time.Now()
@@ -202,14 +179,14 @@ func (c *Controller) genCheckerCheckTask(
 			c.l.
 				With(zap.Error(err)).
 				Sugar().
-				Errorf("checker.Check of %q errored", checker.ServiceName())
+				Errorf("checker.Check of %q errored", checker.CheckerID())
 
 			// if checker.Check fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
 			success = false
 		}
 
 		if success {
-			c.l.Sugar().Debugf("checker %q run succeed", checker.ServiceName())
+			c.l.Sugar().Debugf("checker %q run succeed", checker.CheckerID())
 			m.SuccessCheckCounter.Inc()
 			m.SuccessCheckDuration.UpdateDuration(start)
 		} else {
@@ -219,11 +196,11 @@ func (c *Controller) genCheckerCheckTask(
 
 		// but, errors of saving state are unexpected, need to mark task as failed
 
-		if _, err := c.storage.AppendServiceCheck(ctx, checker.ServiceName(), success); err != nil {
+		if _, err := c.storage.AppendCheck(ctx, checker.CheckerID(), success); err != nil {
 			return errors.Wrap(err, "cannot save sla to storage")
 		}
 
-		if err := c.saveCheckerData(ctx, checker.ServiceName(), data); err != nil {
+		if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
 			return errors.Wrap(err, "cannot save check data to storage")
 		}
 
@@ -233,12 +210,12 @@ func (c *Controller) genCheckerCheckTask(
 
 func (c *Controller) genCheckerGetTask(
 	checker hazycheck.Checker,
-	svc *ServiceCheckerState,
+	svc *ServiceState,
 ) raterunner.TaskFunc {
-	m := c.checkerMetricsFor(checker.ServiceName())
+	m := c.checkerMetricsFor(checker.CheckerID())
 
 	return func(ctx context.Context) error {
-		pool, err := c.storage.GetCheckerDataPool(ctx, checker.ServiceName())
+		pool, err := c.storage.GetCheckerDataPool(ctx, checker.CheckerID())
 		if err != nil {
 			return errors.Wrap(err, "cannot get pool of data to run Checker.Get")
 		}
@@ -257,11 +234,11 @@ func (c *Controller) genCheckerGetTask(
 			// if checker.Get fails -- it's OK, it's expected behaviour, so, we jkon't need to fail this task
 			success = false
 			c.l.Sugar().
-				Debugf("checker.Get of %q failed with message %s", checker.ServiceName(), err)
+				Debugf("checker.Get of %q failed with message %s", checker.CheckerID(), err)
 		}
 
 		if success {
-			c.l.Sugar().Debugf("checker.Get of %q succeed", checker.ServiceName())
+			c.l.Sugar().Debugf("checker.Get of %q succeed", checker.CheckerID())
 			m.SuccessGetCounter.Inc()
 			m.SuccessGetDuration.UpdateDuration(start)
 		} else {
@@ -272,7 +249,7 @@ func (c *Controller) genCheckerGetTask(
 		// TODO: add multiplier of get fails
 
 		// but, errors of saving state are unexpected. need to mark task as failed.
-		if _, err := c.storage.AppendServiceCheck(ctx, checker.ServiceName(), success); err != nil {
+		if _, err := c.storage.AppendCheck(ctx, checker.CheckerID(), success); err != nil {
 			return errors.Wrap(err, "cannot save sla to storage")
 		}
 
@@ -282,21 +259,21 @@ func (c *Controller) genCheckerGetTask(
 
 func (c *Controller) saveCheckerData(
 	ctx context.Context,
-	serviceName string,
+	checkerID hazycheck.CheckerID,
 	data []byte,
 ) error {
-	pool, err := c.storage.GetCheckerDataPool(ctx, serviceName)
+	pool, err := c.storage.GetCheckerDataPool(ctx, checkerID)
 	if err != nil {
 		return errors.Wrap(err, "cannot get current data pool")
 	}
 
 	if c.strategy.NeedSave(uint64(len(pool))) {
-		c.storage.AppendCheckerData(ctx, serviceName, data)
+		c.storage.AppendCheckerData(ctx, checkerID, data)
 	}
 
 	toDelete := c.strategy.NeedDelete(uint64(len(pool)))
 	for _, idx := range toDelete {
-		if _, err := c.storage.RemoveDataFromPool(ctx, serviceName, idx); err != nil {
+		if _, err := c.storage.RemoveDataFromPool(ctx, checkerID, idx); err != nil {
 			return errors.Wrap(err, "cannot delete stale data from pool")
 		}
 	}
@@ -317,36 +294,43 @@ func (c *Controller) syncState(ctx context.Context) error {
 
 	var errlist *multierror.Error
 	for svcName, svc := range currentState.Services {
-		chckr, exists := c.registeredCheckers[svcName]
-		if !exists {
-			errlist = multierror.Append(
-				errlist,
-				errors.Errorf(
-					"checker %q from saved state doesn't exist",
-					svcName,
-				),
-			)
-			continue
-		}
+		for checkerName, checkerState := range svc.Checkers {
+			checkerID := hazycheck.CheckerID{
+				Service: svcName,
+				Name:    checkerName,
+			}
 
-		checkerTaskName := fmt.Sprintf("%s__%s", svcName, "check")
-		checkerTask := c.genCheckerCheckTask(chckr, &svc)
-		if err := c.setTaskRate(checkerTaskName, checkerTask, svc.CheckRate); err != nil {
-			errlist = multierror.Append(
-				errlist,
-				errors.Wrapf(err, "cannot set rate on check %q", chckr.ServiceName()),
-			)
-			continue
-		}
+			checker, exists := c.registeredCheckers[checkerID]
+			if !exists {
+				errlist = multierror.Append(
+					errlist,
+					errors.Errorf(
+						"checker %q from saved state doesn't exist",
+						svcName,
+					),
+				)
+				continue
+			}
 
-		getterTaskName := fmt.Sprintf("%s__%s", svcName, "get")
-		getterTask := c.genCheckerGetTask(chckr, &svc)
-		if err := c.setTaskRate(getterTaskName, getterTask, svc.GetRate); err != nil {
-			errlist = multierror.Append(
-				errlist,
-				errors.Wrapf(err, "cannot set rate on get %q", chckr.ServiceName()),
-			)
-			continue
+			checkerTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "check")
+			checkerTask := c.genCheckerCheckTask(checker, &svc)
+			if err := c.setTaskRate(checkerTaskName, checkerTask, checkerState.Check.Rate); err != nil {
+				errlist = multierror.Append(
+					errlist,
+					errors.Wrapf(err, "cannot set rate on check %q", checker.CheckerID()),
+				)
+				continue
+			}
+
+			getterTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "get")
+			getterTask := c.genCheckerGetTask(checker, &svc)
+			if err := c.setTaskRate(getterTaskName, getterTask, checkerState.Get.Rate); err != nil {
+				errlist = multierror.Append(
+					errlist,
+					errors.Wrapf(err, "cannot set rate on get %q", checker.CheckerID()),
+				)
+				continue
+			}
 		}
 
 		for sploitName, state := range svc.Sploits {
@@ -405,106 +389,4 @@ func (c *Controller) waitFor(ctx context.Context, d time.Duration) error {
 	case <-time.After(d):
 		return nil
 	}
-}
-
-func (c *Controller) sploitMetricsFor(sploitID hazycheck.SploitID) *sploitMetrics {
-	// hot path, metrics are already registered, need only to return them
-	// multiple goroutines may try to get metrics, so read lock is used
-	c.sploitMetricsMu.RLock()
-	m, exists := c.sploitMetrics[sploitID]
-	if exists {
-		c.sploitMetricsMu.RUnlock()
-		return m
-	}
-
-	c.sploitMetricsMu.RUnlock()
-
-	// metrics are not registered, need to register and save them
-	// need to write to map, so we need exclusive lock
-	c.sploitMetricsMu.Lock()
-	defer c.sploitMetricsMu.Unlock()
-
-	// multiple goroutines may be here, so need to check are metrics registered by another
-	// gorutine earlier
-	m, exists = c.sploitMetrics[sploitID]
-	if exists {
-		return m
-	}
-
-	template := `%s{status=%q, service=%q, sploit=%q}`
-	m = &sploitMetrics{
-		SuccessCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "sploit_runs_total", "success", sploitID.Service, sploitID.Name),
-		),
-		FailCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "sploit_runs_total", "fail", sploitID.Service, sploitID.Name),
-		),
-
-		SuccessDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "sploit_duration", "success", sploitID.Service, sploitID.Name),
-		),
-		FailDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "sploit_duration", "fail", sploitID.Service, sploitID.Name),
-		),
-	}
-
-	c.sploitMetrics[sploitID] = m
-
-	return m
-}
-
-func (c *Controller) checkerMetricsFor(service string) *checherMetrics {
-	// hot path, metrics are already registered, need only to return them
-	// multiple goroutines may try to get metrics, so read lock is used
-	c.checkerMetricsMu.RLock()
-	m, exists := c.checkerMetrics[service]
-	if exists {
-		c.checkerMetricsMu.RUnlock()
-		return m
-	}
-
-	c.checkerMetricsMu.RUnlock()
-
-	// metrics are not registered, need to register and save them
-	// need to write to map, so we need exclusive lock
-	c.checkerMetricsMu.Lock()
-	defer c.checkerMetricsMu.Unlock()
-
-	// multiple goroutines may be here, so need to check are metrics registered again
-	m, exists = c.checkerMetrics[service]
-	if exists {
-		return m
-	}
-
-	template := `%s{status=%q, method=%q, service=%q}`
-	m = &checherMetrics{
-		SuccessCheckCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "runs_total", "success", "check", service),
-		),
-		FailCheckCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "runs_total", "fail", "check", service),
-		),
-		SuccessGetCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "runs_total", "success", "get", service),
-		),
-		FailGetCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "runs_total", "fail", "get", service),
-		),
-		SuccessCheckDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "run_duration", "success", "check", service),
-		),
-		FailCheckDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "run_duration", "fail", "check", service),
-		),
-		SuccessGetDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "run_duration", "success", "get", service),
-		),
-		FailGetDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "run_duration", "fail", "get", service),
-		),
-	}
-
-	c.checkerMetrics[service] = m
-
-	return m
 }

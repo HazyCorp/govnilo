@@ -18,7 +18,7 @@ var ListCheckersCmd = &cobra.Command{
 			return errors.Wrap(err, "cannot build checkers")
 		}
 
-		checkerNames := lo.Map(checkers, func(c hazycheck.Checker, _ int) string { return c.ServiceName() })
+		checkerNames := lo.Map(checkers, func(c hazycheck.Checker, _ int) string { return c.CheckerID() })
 		util.PrintJson(checkerNames)
 		return nil
 	},

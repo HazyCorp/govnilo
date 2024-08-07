@@ -28,7 +28,7 @@ var GetCmd = &cobra.Command{
 		target := checkflags.Target
 
 		checker, exists := lo.Find(checkers, func(c hazycheck.Checker) bool {
-			return c.ServiceName() == service
+			return c.CheckerID() == service
 		})
 		if !exists {
 			return errors.Errorf("service with name %q not registered", service)

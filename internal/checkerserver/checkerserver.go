@@ -19,7 +19,8 @@ type CheckerServer struct {
 	pb.UnimplementedCheckerServiceServer
 
 	storage  checkerctrl.ControllerStorage
-	checkers map[string]hazycheck.Checker
+	checkers map[hazycheck.CheckerID]hazycheck.Checker
+	sploits  map[hazycheck.SploitID]hazycheck.Sploit
 	l        *zap.Logger
 }
 
@@ -28,18 +29,25 @@ type CheckerServerIn struct {
 
 	Storage  checkerctrl.ControllerStorage
 	Checkers []hazycheck.Checker `group:"checkers"`
+	Sploits  []hazycheck.Sploit  `group:"sploits"`
 	Logger   *zap.Logger
 }
 
 func New(in CheckerServerIn) *CheckerServer {
-	checkers := make(map[string]hazycheck.Checker)
+	checkers := make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers))
 	for _, c := range in.Checkers {
-		checkers[c.ServiceName()] = c
+		checkers[c.CheckerID()] = c
+	}
+
+	sploits := make(map[hazycheck.SploitID]hazycheck.Sploit, len(in.Sploits))
+	for _, s := range in.Sploits {
+		sploits[s.SploitID()] = s
 	}
 
 	return &CheckerServer{
 		storage:  in.Storage,
 		checkers: checkers,
+		sploits:  sploits,
 		l:        in.Logger,
 	}
 }
@@ -54,12 +62,33 @@ func NewFX(in CheckerServerIn, srv *grpc.Server) *CheckerServer {
 
 func (s *CheckerServer) SetCheckerState(
 	ctx context.Context,
-	in *pb.SetCheckerStateReq,
-) (*pb.SetCheckerStateRsp, error) {
+	in *pb.SetStateReq,
+) (*pb.SetStateRsp, error) {
 	converted := pbToState(in.GetState())
-	for svcName := range converted.Services {
-		if _, exists := s.checkers[svcName]; !exists {
-			return nil, errors.Errorf("checker %q not registered, config is invalid", svcName)
+	for svcName, svcState := range converted.Services {
+		for checkerName := range svcState.Checkers {
+			checkerID := hazycheck.CheckerID{
+				Service: svcName,
+				Name:    checkerName,
+			}
+
+			if _, exists := s.checkers[checkerID]; !exists {
+				return nil, errors.Errorf(
+					"checker %+v not registered, config is invalid",
+					checkerID,
+				)
+			}
+		}
+
+		for sploitName := range svcState.Sploits {
+			sploitID := hazycheck.SploitID{
+				Service: svcName,
+				Name:    sploitName,
+			}
+
+			if _, exists := s.sploits[sploitID]; !exists {
+				return nil, errors.Errorf("sploit %+v not registered, config is invalid", sploitID)
+			}
 		}
 	}
 
@@ -67,30 +96,38 @@ func (s *CheckerServer) SetCheckerState(
 		return nil, errors.Wrap(err, "cannot save state in storage")
 	}
 
-	return &pb.SetCheckerStateRsp{}, nil
+	return &pb.SetStateRsp{}, nil
 }
 
-func (s *CheckerServer) GetCheckerState(
+func (s *CheckerServer) GetState(
 	ctx context.Context,
-	in *pb.GetCheckerStateReq,
-) (*pb.GetCheckerStateRsp, error) {
+	in *pb.GetStateReq,
+) (*pb.GetStateRsp, error) {
 	state, err := s.storage.GetContestState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve state from storage")
 	}
 
-	return &pb.GetCheckerStateRsp{State: stateToPb(state)}, nil
+	return &pb.GetStateRsp{State: stateToPb(state)}, nil
 }
 
 func (s *CheckerServer) GetSLA(ctx context.Context, req *pb.GetSLAReq) (*pb.GetSLAResponse, error) {
-	slas := make(map[string]*pb.SLA, len(s.checkers))
-	for svcName := range s.checkers {
-		sla, err := s.storage.GetServiceSLA(ctx, svcName)
+	slas := make(map[string]*pb.ServiceSLA, len(s.checkers))
+	for checkerID := range s.checkers {
+		sla, err := s.storage.GetCheckerSLA(ctx, checkerID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot get sla for service %s from storage", svcName)
+			return nil, errors.Wrapf(err, "cannot get sla for checker %+v from storage", checkerID)
 		}
 
-		slas[svcName] = &pb.SLA{
+		svcSLA, found := slas[checkerID.Service]
+		if !found {
+			svcSLA = &pb.ServiceSLA{
+				Slas: make(map[string]*pb.SLA),
+			}
+			slas[checkerID.Service] = svcSLA
+		}
+
+		svcSLA.Slas[checkerID.Name] = &pb.SLA{
 			SuccessCount: uint64(sla.SuccessfullAttempts),
 			TotalCount:   uint64(sla.TotalAttempts),
 		}
@@ -101,26 +138,26 @@ func (s *CheckerServer) GetSLA(ctx context.Context, req *pb.GetSLAReq) (*pb.GetS
 	}, nil
 }
 
-func pbToState(in *pb.CheckerState) checkerctrl.ServicesContestState {
-	services := make(map[string]checkerctrl.ServiceCheckerState, len(in.Services))
+func pbToState(in *pb.State) checkerctrl.State {
+	services := make(map[string]checkerctrl.ServiceState, len(in.Services))
 	for name, state := range in.GetServices() {
-		serviceState := pbToServiceCheckerState(state)
+		serviceState := pbToCheckerState(state)
 		services[name] = *serviceState
 	}
 
-	return checkerctrl.ServicesContestState{
+	return checkerctrl.State{
 		Services: services,
 	}
 }
 
-func stateToPb(in *checkerctrl.ServicesContestState) *pb.CheckerState {
+func stateToPb(in *checkerctrl.State) *pb.State {
 	services := make(map[string]*pb.ServiceState, len(in.Services))
 	for name, state := range in.Services {
-		pbState := serviceCheckerStateToPb(&state)
+		pbState := checkerStateToPB(&state)
 		services[name] = pbState
 	}
 
-	return &pb.CheckerState{
+	return &pb.State{
 		Services: services,
 	}
 }
@@ -139,38 +176,58 @@ func rateToPb(r *checkerctrl.Rate) *pb.Rate {
 	}
 }
 
-func pbToServiceCheckerState(in *pb.ServiceState) *checkerctrl.ServiceCheckerState {
-	sploits := make(map[string]checkerctrl.SploitState, len(in.GetSploitsState()))
-	for sploitName, sploit := range in.GetSploitsState() {
+func pbToCheckerState(in *pb.ServiceState) *checkerctrl.ServiceState {
+	sploits := make(map[string]checkerctrl.SploitState, len(in.GetSploits()))
+	for sploitName, sploit := range in.GetSploits() {
 		sploits[sploitName] = checkerctrl.SploitState{
 			Rate: pbToRate(sploit.Rate),
 		}
 	}
 
-	serviceState := checkerctrl.ServiceCheckerState{
-		Target:    in.GetTarget(),
-		CheckRate: pbToRate(in.GetCheckState().GetCheckerCheckRate()),
-		GetRate:   pbToRate(in.GetCheckState().GetCheckerGetRate()),
-		Sploits:   sploits,
+	checkers := make(map[string]checkerctrl.CheckerState, len(in.GetCheckers()))
+	for checkerName, checker := range in.GetCheckers() {
+		checkers[checkerName] = checkerctrl.CheckerState{
+			Check: checkerctrl.CheckerCheckState{
+				Rate: pbToRate(checker.Check.Rate),
+			},
+			Get: checkerctrl.CheckerGetState{
+				Rate: pbToRate(checker.Get.Rate),
+			},
+		}
+	}
+
+	serviceState := checkerctrl.ServiceState{
+		Target:   in.GetTarget(),
+		Sploits:  sploits,
+		Checkers: checkers,
 	}
 
 	return &serviceState
 }
 
-func serviceCheckerStateToPb(in *checkerctrl.ServiceCheckerState) *pb.ServiceState {
-	sploits := make(map[string]*pb.SploitState)
+func checkerStateToPB(in *checkerctrl.ServiceState) *pb.ServiceState {
+	sploits := make(map[string]*pb.SploitState, len(in.Sploits))
 	for sploitName, sploit := range in.Sploits {
 		sploits[sploitName] = &pb.SploitState{
 			Rate: rateToPb(&sploit.Rate),
 		}
 	}
 
+	checkers := make(map[string]*pb.CheckerState)
+	for checkerName, checker := range in.Checkers {
+		checkers[checkerName] = &pb.CheckerState{
+			Check: &pb.CheckState{
+				Rate: rateToPb(&checker.Check.Rate),
+			},
+			Get: &pb.GetState{
+				Rate: rateToPb(&checker.Get.Rate),
+			},
+		}
+	}
+
 	return &pb.ServiceState{
-		Target: in.Target,
-		CheckState: &pb.CheckState{
-			CheckerCheckRate: rateToPb(&in.CheckRate),
-			CheckerGetRate:   rateToPb(&in.GetRate),
-		},
-		SploitsState: sploits,
+		Target:   in.Target,
+		Checkers: checkers,
+		Sploits:  sploits,
 	}
 }

@@ -22,8 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CheckerServiceClient interface {
-	SetCheckerState(ctx context.Context, in *SetCheckerStateReq, opts ...grpc.CallOption) (*SetCheckerStateRsp, error)
-	GetCheckerState(ctx context.Context, in *GetCheckerStateReq, opts ...grpc.CallOption) (*GetCheckerStateRsp, error)
+	SetState(ctx context.Context, in *SetStateReq, opts ...grpc.CallOption) (*SetStateRsp, error)
+	GetState(ctx context.Context, in *GetStateReq, opts ...grpc.CallOption) (*GetStateRsp, error)
 	GetSLA(ctx context.Context, in *GetSLAReq, opts ...grpc.CallOption) (*GetSLAResponse, error)
 }
 
@@ -35,18 +35,18 @@ func NewCheckerServiceClient(cc grpc.ClientConnInterface) CheckerServiceClient {
 	return &checkerServiceClient{cc}
 }
 
-func (c *checkerServiceClient) SetCheckerState(ctx context.Context, in *SetCheckerStateReq, opts ...grpc.CallOption) (*SetCheckerStateRsp, error) {
-	out := new(SetCheckerStateRsp)
-	err := c.cc.Invoke(ctx, "/pb.CheckerService/SetCheckerState", in, out, opts...)
+func (c *checkerServiceClient) SetState(ctx context.Context, in *SetStateReq, opts ...grpc.CallOption) (*SetStateRsp, error) {
+	out := new(SetStateRsp)
+	err := c.cc.Invoke(ctx, "/checker.proto.CheckerService/SetState", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *checkerServiceClient) GetCheckerState(ctx context.Context, in *GetCheckerStateReq, opts ...grpc.CallOption) (*GetCheckerStateRsp, error) {
-	out := new(GetCheckerStateRsp)
-	err := c.cc.Invoke(ctx, "/pb.CheckerService/GetCheckerState", in, out, opts...)
+func (c *checkerServiceClient) GetState(ctx context.Context, in *GetStateReq, opts ...grpc.CallOption) (*GetStateRsp, error) {
+	out := new(GetStateRsp)
+	err := c.cc.Invoke(ctx, "/checker.proto.CheckerService/GetState", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *checkerServiceClient) GetCheckerState(ctx context.Context, in *GetCheck
 
 func (c *checkerServiceClient) GetSLA(ctx context.Context, in *GetSLAReq, opts ...grpc.CallOption) (*GetSLAResponse, error) {
 	out := new(GetSLAResponse)
-	err := c.cc.Invoke(ctx, "/pb.CheckerService/GetSLA", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/checker.proto.CheckerService/GetSLA", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +66,8 @@ func (c *checkerServiceClient) GetSLA(ctx context.Context, in *GetSLAReq, opts .
 // All implementations must embed UnimplementedCheckerServiceServer
 // for forward compatibility
 type CheckerServiceServer interface {
-	SetCheckerState(context.Context, *SetCheckerStateReq) (*SetCheckerStateRsp, error)
-	GetCheckerState(context.Context, *GetCheckerStateReq) (*GetCheckerStateRsp, error)
+	SetState(context.Context, *SetStateReq) (*SetStateRsp, error)
+	GetState(context.Context, *GetStateReq) (*GetStateRsp, error)
 	GetSLA(context.Context, *GetSLAReq) (*GetSLAResponse, error)
 	mustEmbedUnimplementedCheckerServiceServer()
 }
@@ -76,11 +76,11 @@ type CheckerServiceServer interface {
 type UnimplementedCheckerServiceServer struct {
 }
 
-func (UnimplementedCheckerServiceServer) SetCheckerState(context.Context, *SetCheckerStateReq) (*SetCheckerStateRsp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetCheckerState not implemented")
+func (UnimplementedCheckerServiceServer) SetState(context.Context, *SetStateReq) (*SetStateRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetState not implemented")
 }
-func (UnimplementedCheckerServiceServer) GetCheckerState(context.Context, *GetCheckerStateReq) (*GetCheckerStateRsp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCheckerState not implemented")
+func (UnimplementedCheckerServiceServer) GetState(context.Context, *GetStateReq) (*GetStateRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetState not implemented")
 }
 func (UnimplementedCheckerServiceServer) GetSLA(context.Context, *GetSLAReq) (*GetSLAResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSLA not implemented")
@@ -98,38 +98,38 @@ func RegisterCheckerServiceServer(s grpc.ServiceRegistrar, srv CheckerServiceSer
 	s.RegisterService(&CheckerService_ServiceDesc, srv)
 }
 
-func _CheckerService_SetCheckerState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetCheckerStateReq)
+func _CheckerService_SetState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetStateReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CheckerServiceServer).SetCheckerState(ctx, in)
+		return srv.(CheckerServiceServer).SetState(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.CheckerService/SetCheckerState",
+		FullMethod: "/checker.proto.CheckerService/SetState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CheckerServiceServer).SetCheckerState(ctx, req.(*SetCheckerStateReq))
+		return srv.(CheckerServiceServer).SetState(ctx, req.(*SetStateReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CheckerService_GetCheckerState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCheckerStateReq)
+func _CheckerService_GetState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStateReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CheckerServiceServer).GetCheckerState(ctx, in)
+		return srv.(CheckerServiceServer).GetState(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.CheckerService/GetCheckerState",
+		FullMethod: "/checker.proto.CheckerService/GetState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CheckerServiceServer).GetCheckerState(ctx, req.(*GetCheckerStateReq))
+		return srv.(CheckerServiceServer).GetState(ctx, req.(*GetStateReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -144,7 +144,7 @@ func _CheckerService_GetSLA_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.CheckerService/GetSLA",
+		FullMethod: "/checker.proto.CheckerService/GetSLA",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CheckerServiceServer).GetSLA(ctx, req.(*GetSLAReq))
@@ -156,16 +156,16 @@ func _CheckerService_GetSLA_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var CheckerService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.CheckerService",
+	ServiceName: "checker.proto.CheckerService",
 	HandlerType: (*CheckerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SetCheckerState",
-			Handler:    _CheckerService_SetCheckerState_Handler,
+			MethodName: "SetState",
+			Handler:    _CheckerService_SetState_Handler,
 		},
 		{
-			MethodName: "GetCheckerState",
-			Handler:    _CheckerService_GetCheckerState_Handler,
+			MethodName: "GetState",
+			Handler:    _CheckerService_GetState_Handler,
 		},
 		{
 			MethodName: "GetSLA",
