@@ -9,4 +9,10 @@ type Checker = hazycheck.Checker
 
 type Sploit = hazycheck.Sploit
 
+type Provider = hazycheck.Provider
+
 var Execute = cmd.Execute
+
+var RegisterChecker = hazycheck.RegisterChecker
+
+var RegisterSploit = hazycheck.RegisterSploit
