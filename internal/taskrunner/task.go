@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/HazyCorp/checker/pkg/hazyerr"
+	"github.com/HazyCorp/govnilo/pkg/hazyerr"
 )
 
 type Task interface {

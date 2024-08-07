@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/HazyCorp/checker/cmd/checker/cmd"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd"
 )
 
 func main() {

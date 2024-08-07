@@ -3,8 +3,8 @@ package cmdutil
 import (
 	"context"
 
-	"github.com/HazyCorp/checker/internal/fxbuild"
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/fxbuild"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"

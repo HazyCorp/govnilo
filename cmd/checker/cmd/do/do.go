@@ -1,9 +1,9 @@
 package do
 
 import (
-	"github.com/HazyCorp/checker/cmd/checker/cmd/do/check"
-	"github.com/HazyCorp/checker/cmd/checker/cmd/do/get"
-	"github.com/HazyCorp/checker/cmd/checker/globflags"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/do/check"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/do/get"
+	"github.com/HazyCorp/govnilo/cmd/checker/globflags"
 	"github.com/spf13/cobra"
 )
 

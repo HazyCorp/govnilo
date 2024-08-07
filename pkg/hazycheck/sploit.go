@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/HazyCorp/checker/internal/registrar"
+	"github.com/HazyCorp/govnilo/internal/registrar"
 )
 
 // RegisterSploit registers a sploit to be run by checker.
