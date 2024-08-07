@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/HazyCorp/govnilo/cmd/checker/globflags"
-	"github.com/HazyCorp/govnilo/internal/cmdutil"
-	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+
+	"github.com/HazyCorp/govnilo/cmd/checker/globflags"
+	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
+
+var checkerName string
 
 var CheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "runs Checker.Check on your service",
+	Short: "runs specified Checker.Check on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
@@ -25,8 +28,13 @@ var CheckCmd = &cobra.Command{
 		service := globflags.Service
 		target := globflags.Target
 
+		checkerID := hazycheck.CheckerID{
+			Service: service,
+			Name:    checkerName,
+		}
+
 		checker, exists := lo.Find(checkers, func(item hazycheck.Checker) bool {
-			return item.CheckerID() == service
+			return item.CheckerID() == checkerID
 		})
 		if !exists {
 			return errors.Errorf("service with name %q not registered", service)
@@ -41,6 +49,7 @@ var CheckCmd = &cobra.Command{
 
 		fmt.Printf(
 			"Service name: %s\n"+
+				"Checker name: %s\n"+
 				"Target:       %s\n"+
 				"Method:       Checker.Check\n"+
 				"Duration:     %s\n"+
@@ -52,6 +61,7 @@ var CheckCmd = &cobra.Command{
 }
 
 func init() {
-	CheckCmd.MarkPersistentFlagRequired("service")
-	CheckCmd.MarkPersistentFlagRequired("target")
+	// CheckCmd.MarkPersistentFlagRequired("checker")
+	// CheckCmd.MarkPersistentFlagRequired("service")
+	// CheckCmd.MarkPersistentFlagRequired("target")
 }

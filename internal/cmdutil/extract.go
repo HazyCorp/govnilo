@@ -3,12 +3,13 @@ package cmdutil
 import (
 	"context"
 
-	"github.com/HazyCorp/govnilo/internal/fxbuild"
-	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+
+	"github.com/HazyCorp/govnilo/internal/fxbuild"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
 type fxOptsKey struct{}
@@ -57,6 +58,7 @@ func ExtractCheckers(enableLogs bool) ([]hazycheck.Checker, error) {
 	if err := app.Start(context.Background()); err != nil {
 		return nil, errors.Wrap(err, "cannot build the app to extract the checkers")
 	}
+	_ = app.Stop(context.Background())
 
 	return registeredCheckers, nil
 }
@@ -96,6 +98,7 @@ func ExtractSploits(enableLogs bool) ([]hazycheck.Sploit, error) {
 	if err := app.Start(context.Background()); err != nil {
 		return nil, errors.Wrap(err, "cannot build the app to extract the sploits")
 	}
+	_ = app.Stop(context.Background())
 
 	return registeredSploits, nil
 }

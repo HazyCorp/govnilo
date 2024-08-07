@@ -1,6 +1,7 @@
 package globflags
 
 var (
-	Service string
-	Target  string
+	Service     string
+	CheckerName string
+	Target      string
 )

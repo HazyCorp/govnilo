@@ -1,10 +1,11 @@
 package do
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/HazyCorp/govnilo/cmd/checker/cmd/do/check"
 	"github.com/HazyCorp/govnilo/cmd/checker/cmd/do/get"
 	"github.com/HazyCorp/govnilo/cmd/checker/globflags"
-	"github.com/spf13/cobra"
 )
 
 var DoCmd = &cobra.Command{
@@ -18,11 +19,14 @@ var DoCmd = &cobra.Command{
 func init() {
 	DoCmd.PersistentFlags().
 		StringVarP(&globflags.Service, "service", "s", "", "specifies service name to run checks on")
-	DoCmd.MarkFlagRequired("service")
+	DoCmd.MarkPersistentFlagRequired("service")
 
 	DoCmd.PersistentFlags().
 		StringVarP(&globflags.Target, "target", "t", "", "specifies target, which will be provided to Checker methods")
-	DoCmd.MarkFlagRequired("target")
+	DoCmd.MarkPersistentFlagRequired("target")
+
+	DoCmd.PersistentFlags().StringVarP(&globflags.Service, "checker", "c", "", "specifies the checker name to be run")
+	DoCmd.MarkPersistentFlagRequired("checker")
 
 	DoCmd.AddCommand(check.CheckCmd)
 	DoCmd.AddCommand(get.GetCmd)
