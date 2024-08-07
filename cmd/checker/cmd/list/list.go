@@ -1,8 +1,8 @@
 package list
 
 import (
-	"github.com/HazyCorp/checker/cmd/checker/cmd/list/checkers"
-	"github.com/HazyCorp/checker/cmd/checker/cmd/list/sploits"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/list/checkers"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/list/sploits"
 	"github.com/spf13/cobra"
 )
 

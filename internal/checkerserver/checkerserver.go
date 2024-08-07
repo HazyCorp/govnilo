@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/HazyCorp/checker/internal/checkerctrl"
-	"github.com/HazyCorp/checker/pkg/hazycheck"
-	"github.com/HazyCorp/checker/pkg/pb"
+	"github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/pb"
 )
 
 type CheckerServer struct {

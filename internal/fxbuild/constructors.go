@@ -10,14 +10,14 @@ import (
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 
-	"github.com/HazyCorp/checker/internal/checkerctrl"
-	"github.com/HazyCorp/checker/internal/checkerserver"
-	"github.com/HazyCorp/checker/internal/configuration"
-	"github.com/HazyCorp/checker/internal/fxutil"
-	grpcutil "github.com/HazyCorp/checker/internal/grpcutil"
-	"github.com/HazyCorp/checker/internal/metricsrv"
-	"github.com/HazyCorp/checker/internal/registrar"
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/checkerserver"
+	"github.com/HazyCorp/govnilo/internal/configuration"
+	"github.com/HazyCorp/govnilo/internal/fxutil"
+	grpcutil "github.com/HazyCorp/govnilo/internal/grpcutil"
+	"github.com/HazyCorp/govnilo/internal/metricsrv"
+	"github.com/HazyCorp/govnilo/internal/registrar"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
 func NewGRPCServer(l *zap.Logger, c configuration.Serve, lc fx.Lifecycle) *grpc.Server {

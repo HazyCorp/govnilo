@@ -14,8 +14,8 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/HazyCorp/checker/internal/raterunner"
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/raterunner"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
 type checherMetrics struct {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	checkflags "github.com/HazyCorp/checker/cmd/checker/globflags"
-	"github.com/HazyCorp/checker/internal/cmdutil"
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	checkflags "github.com/HazyCorp/govnilo/cmd/checker/globflags"
+	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"

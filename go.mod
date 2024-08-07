@@ -1,4 +1,4 @@
-module github.com/HazyCorp/checker
+module github.com/HazyCorp/govnilo
 
 go 1.22.0
 

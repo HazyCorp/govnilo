@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/HazyCorp/checker/cmd/checker/cmd/bench"
-	"github.com/HazyCorp/checker/cmd/checker/cmd/do"
-	"github.com/HazyCorp/checker/cmd/checker/cmd/list"
-	"github.com/HazyCorp/checker/cmd/checker/cmd/run"
-	"github.com/HazyCorp/checker/internal/util"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/bench"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/do"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/list"
+	"github.com/HazyCorp/govnilo/cmd/checker/cmd/run"
+	"github.com/HazyCorp/govnilo/internal/util"
 )
 
 var rootCmd = &cobra.Command{

@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/HazyCorp/checker/pkg/ratelimit"
-	"github.com/HazyCorp/checker/internal/taskrunner"
+	"github.com/HazyCorp/govnilo/pkg/ratelimit"
+	"github.com/HazyCorp/govnilo/internal/taskrunner"
 )
 
 type TaskFunc func(ctx context.Context) error

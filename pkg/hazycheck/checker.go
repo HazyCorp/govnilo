@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/HazyCorp/checker/internal/registrar"
+	"github.com/HazyCorp/govnilo/internal/registrar"
 )
 
 // RegisterChecker registers constructor of the checker with needed annotations.

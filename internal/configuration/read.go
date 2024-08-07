@@ -8,8 +8,8 @@ import (
 	"go.uber.org/fx"
 	"gopkg.in/yaml.v3"
 
-	"github.com/HazyCorp/checker/internal/checkerctrl"
-	"github.com/HazyCorp/checker/internal/metricsrv"
+	"github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/metricsrv"
 )
 
 type Config struct {
