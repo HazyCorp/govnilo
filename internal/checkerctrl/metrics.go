@@ -5,7 +5,7 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
 type checkerMetrics struct {

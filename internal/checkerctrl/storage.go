@@ -5,7 +5,7 @@ import (
 	"maps"
 	"time"
 
-	"github.com/HazyCorp/checker/pkg/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
 // example state (represented in yaml)

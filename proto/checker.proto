@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/HazyCorp/checker;pb";
+option go_package = "github.com/HazyCorp/govnilo;pb";
 
 import "google/protobuf/duration.proto";
 
