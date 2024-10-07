@@ -94,7 +94,7 @@ func (s *State) Clone() State {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type ServiceSLA struct {
+type CheckerSLA struct {
 	TotalAttempts       int
 	SuccessfullAttempts int
 }
@@ -102,12 +102,12 @@ type ServiceSLA struct {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type ControllerStorage interface {
-	GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*ServiceSLA, error)
+	GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*CheckerSLA, error)
 	AppendCheck(
 		ctx context.Context,
 		checkerID hazycheck.CheckerID,
 		successfull bool,
-	) (*ServiceSLA, error)
+	) (*CheckerSLA, error)
 
 	AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error
 	GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error)

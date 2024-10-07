@@ -25,9 +25,6 @@ func init() {
 		StringVarP(&globflags.Target, "target", "t", "", "specifies target, which will be provided to Checker methods")
 	DoCmd.MarkPersistentFlagRequired("target")
 
-	DoCmd.PersistentFlags().StringVarP(&globflags.Service, "checker", "c", "", "specifies the checker name to be run")
-	DoCmd.MarkPersistentFlagRequired("checker")
-
 	DoCmd.AddCommand(check.CheckCmd)
 	DoCmd.AddCommand(get.GetCmd)
 }

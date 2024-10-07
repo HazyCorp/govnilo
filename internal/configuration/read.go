@@ -1,13 +1,13 @@
 package configuration
 
 import (
-	"flag"
 	"os"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
 	"gopkg.in/yaml.v3"
 
+	"github.com/HazyCorp/govnilo/cmd/checker/globflags"
 	"github.com/HazyCorp/govnilo/internal/checkerctrl"
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
 )
@@ -22,13 +22,7 @@ type Config struct {
 }
 
 func Read() (Config, error) {
-	var confPath string
-	flag.StringVar(&confPath, "conf", "", "Path to configuration")
-	flag.Parse()
-
-	if confPath == "" {
-		return Config{}, errors.Errorf("config path not provided")
-	}
+	confPath := globflags.ConfigPath
 
 	data, err := os.ReadFile(confPath)
 	if err != nil {

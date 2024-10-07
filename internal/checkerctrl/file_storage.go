@@ -9,12 +9,13 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/hazyerr"
 	"github.com/HazyCorp/govnilo/pkg/statestore"
 )
 
 type serviceRuntimeState struct {
-	SLA             ServiceSLA
+	SLA             CheckerSLA
 	CheckerDataPool [][]byte
 }
 
@@ -34,7 +35,7 @@ func (s *serviceRuntimeState) Clone() serviceRuntimeState {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type storageState struct {
-	CheckerRuntimeStates map[string]serviceRuntimeState
+	CheckerRuntimeStates map[hazycheck.CheckerID]serviceRuntimeState
 	ControllerState      State
 
 	initialized bool
@@ -48,7 +49,7 @@ func (s *storageState) init() {
 	}
 
 	if s.CheckerRuntimeStates == nil {
-		s.CheckerRuntimeStates = make(map[string]serviceRuntimeState)
+		s.CheckerRuntimeStates = make(map[hazycheck.CheckerID]serviceRuntimeState)
 	}
 	if s.ControllerState.Services == nil {
 		s.ControllerState.Services = make(map[string]ServiceState)
@@ -58,7 +59,7 @@ func (s *storageState) init() {
 }
 
 func (s *storageState) Clone() storageState {
-	services := make(map[string]serviceRuntimeState)
+	services := make(map[hazycheck.CheckerID]serviceRuntimeState)
 	for k, v := range s.CheckerRuntimeStates {
 		services[k] = v
 	}
@@ -66,10 +67,10 @@ func (s *storageState) Clone() storageState {
 	return storageState{CheckerRuntimeStates: services, ControllerState: s.ControllerState.Clone()}
 }
 
-func (s *storageState) GetServiceSLA(serviceName string) (*ServiceSLA, error) {
+func (s *storageState) GetCheckerSLA(id hazycheck.CheckerID) (*CheckerSLA, error) {
 	s.init()
 
-	serviceState, exists := s.CheckerRuntimeStates[serviceName]
+	serviceState, exists := s.CheckerRuntimeStates[id]
 	if !exists {
 		return nil, errors.Errorf("cannot find service in file")
 	}
@@ -77,15 +78,15 @@ func (s *storageState) GetServiceSLA(serviceName string) (*ServiceSLA, error) {
 	return &serviceState.SLA, nil
 }
 
-func (s *storageState) AppendServiceCheck(
-	serviceName string,
+func (s *storageState) AppendCheck(
+	id hazycheck.CheckerID,
 	successfull bool,
-) (*ServiceSLA, error) {
+) (*CheckerSLA, error) {
 	s.init()
 
-	serviceState, exists := s.CheckerRuntimeStates[serviceName]
+	serviceState, exists := s.CheckerRuntimeStates[id]
 	if !exists {
-		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
+		s.CheckerRuntimeStates[id] = serviceRuntimeState{}
 	}
 
 	sla := &serviceState.SLA
@@ -94,7 +95,7 @@ func (s *storageState) AppendServiceCheck(
 	}
 	sla.TotalAttempts++
 
-	s.CheckerRuntimeStates[serviceName] = serviceState
+	s.CheckerRuntimeStates[id] = serviceState
 	return sla, nil
 }
 
@@ -111,38 +112,38 @@ func (s *storageState) SetContestState(newState *State) {
 	s.ControllerState = newState.Clone()
 }
 
-func (s *storageState) AppendCheckerData(serviceName string, data []byte) error {
+func (s *storageState) AppendCheckerData(id hazycheck.CheckerID, data []byte) error {
 	s.init()
 
-	svc, exists := s.CheckerRuntimeStates[serviceName]
+	svc, exists := s.CheckerRuntimeStates[id]
 	if !exists {
-		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
-		svc = s.CheckerRuntimeStates[serviceName]
+		s.CheckerRuntimeStates[id] = serviceRuntimeState{}
+		svc = s.CheckerRuntimeStates[id]
 	}
 
 	svc.CheckerDataPool = append(svc.CheckerDataPool, data)
-	s.CheckerRuntimeStates[serviceName] = svc
+	s.CheckerRuntimeStates[id] = svc
 
 	return nil
 }
 
-func (s *storageState) GetCheckerDataPool(serviceName string) ([][]byte, error) {
+func (s *storageState) GetCheckerDataPool(id hazycheck.CheckerID) ([][]byte, error) {
 	s.init()
 
-	svc, exists := s.CheckerRuntimeStates[serviceName]
+	svc, exists := s.CheckerRuntimeStates[id]
 	if !exists {
-		s.CheckerRuntimeStates[serviceName] = serviceRuntimeState{}
-		svc = s.CheckerRuntimeStates[serviceName]
+		s.CheckerRuntimeStates[id] = serviceRuntimeState{}
+		svc = s.CheckerRuntimeStates[id]
 	}
 	svc = svc.Clone()
 
 	return svc.CheckerDataPool, nil
 }
 
-func (s *storageState) RemoveDataFromPool(serviceName string, idx uint64) ([]byte, error) {
+func (s *storageState) RemoveDataFromPool(id hazycheck.CheckerID, idx uint64) ([]byte, error) {
 	s.init()
 
-	svc, exists := s.CheckerRuntimeStates[serviceName]
+	svc, exists := s.CheckerRuntimeStates[id]
 	if !exists {
 		return nil, errors.Wrap(hazyerr.ErrNotFound, "service not known")
 	}
@@ -180,118 +181,94 @@ func NewFileStorage(path string) (*FileStorage, error) {
 	return &FileStorage{storage: internal}, nil
 }
 
-func (s *FileStorage) GetServiceSLA(ctx context.Context, serviceName string) (*ServiceSLA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *FileStorage) GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*CheckerSLA, error) {
+	panic("implement me")
+}
 
+func (s *FileStorage) AppendCheck(
+	ctx context.Context,
+	checkerID hazycheck.CheckerID,
+	successfull bool,
+) (*CheckerSLA, error) {
+	var sla *CheckerSLA
+
+	err := s.storage.UpdateState(ctx, func(st *storageState) error {
+		currentSLA, err := st.AppendCheck(checkerID, successfull)
+		if err != nil {
+			return err
+		}
+
+		sla = currentSLA
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot append check to state")
+	}
+
+	return sla, nil
+}
+
+func (s *FileStorage) AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error {
+	err := s.storage.UpdateState(ctx, func(st *storageState) error {
+		return st.AppendCheckerData(checkerID, data)
+	})
+	if err != nil {
+		return errors.Wrap(err, "cannot append checker data to state")
+	}
+
+	return nil
+}
+
+func (s *FileStorage) GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error) {
+	// TODO: add caching
 	state, err := s.storage.RetrieveState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve state from file")
 	}
 
-	return state.GetServiceSLA(serviceName)
-}
-
-func (s *FileStorage) AppendServiceCheck(
-	ctx context.Context,
-	serviceName string,
-	successfull bool,
-) (*ServiceSLA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var returnSLA ServiceSLA
-	err := s.storage.UpdateState(ctx, func(state *storageState) error {
-		sla, err := state.AppendServiceCheck(serviceName, successfull)
-		if err != nil {
-			return err
-		}
-
-		returnSLA = *sla
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot update state in file storage")
-	}
-
-	return &returnSLA, nil
-}
-
-func (s *FileStorage) AppendCheckerData(
-	ctx context.Context,
-	serviceName string,
-	data []byte,
-) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.storage.UpdateState(ctx, func(state *storageState) error {
-		return state.AppendCheckerData(serviceName, data)
-	})
-}
-
-func (s *FileStorage) GetCheckerDataPool(
-	ctx context.Context,
-	serviceName string,
-) ([][]byte, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, err := s.storage.RetrieveState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot retrieve state from file storage")
-	}
-
-	return state.GetCheckerDataPool(serviceName)
+	return state.GetCheckerDataPool(checkerID)
 }
 
 func (s *FileStorage) RemoveDataFromPool(
 	ctx context.Context,
-	servicieName string,
+	checkerID hazycheck.CheckerID,
 	idx uint64,
 ) ([]byte, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	var data []byte
-	err := s.storage.UpdateState(ctx, func(state *storageState) error {
-		d, err := state.RemoveDataFromPool(servicieName, idx)
+
+	err := s.storage.UpdateState(ctx, func(st *storageState) error {
+		removedData, err := st.RemoveDataFromPool(checkerID, idx)
 		if err != nil {
-			return errors.Wrap(err, "cannot remove data from pool")
+			return err
 		}
 
-		data = d
+		data = removedData
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot update state in file storage")
+		return nil, errors.Wrap(err, "cannot remove checker data from state")
 	}
 
 	return data, nil
 }
 
 func (s *FileStorage) GetContestState(ctx context.Context) (*State, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, err := s.storage.RetrieveState(ctx)
+	st, err := s.storage.RetrieveState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve state from file")
 	}
+	contestState := st.GetContestState()
 
-	return state.GetContestState(), nil
+	return contestState, nil
 }
 
 func (s *FileStorage) SetContestState(ctx context.Context, newState *State) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	err := s.storage.UpdateState(ctx, func(state *storageState) error {
-		state.SetContestState(newState)
+	err := s.storage.UpdateState(ctx, func(st *storageState) error {
+		st.SetContestState(newState)
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "cannot update state in file store")
+		return errors.Wrap(err, "cannot set contest state")
 	}
 
 	return nil
@@ -304,7 +281,8 @@ func (s *FileStorage) Flush(ctx context.Context) error {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type AsyncFileStoreConfig struct {
-	Path string `yaml:"path" json:"path"`
+	Path         string        `yaml:"path" json:"path"`
+	SyncInterval time.Duration `yaml:"sync_interval" json:"sync_interval"`
 }
 
 type AsyncFileStoreIn struct {
@@ -314,6 +292,7 @@ type AsyncFileStoreIn struct {
 	Config AsyncFileStoreConfig
 }
 
+// AsyncFileStore implements Storage
 var _ ControllerStorage = &AsyncFileStore{}
 
 type AsyncFileStore struct {
@@ -321,6 +300,7 @@ type AsyncFileStore struct {
 	l            *zap.Logger
 	storage      *statestore.JsonFile[storageState]
 	currentState storageState
+	conf         AsyncFileStoreConfig
 }
 
 func NewAsyncFileStore(in AsyncFileStoreIn) (*AsyncFileStore, error) {
@@ -374,52 +354,6 @@ func NewAsyncFileStoreFX(in AsyncFileStoreIn, lc fx.Lifecycle) (*AsyncFileStore,
 	return store, nil
 }
 
-func (s *AsyncFileStore) GetServiceSLA(
-	ctx context.Context,
-	serviceName string,
-) (*ServiceSLA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.currentState.GetServiceSLA(serviceName)
-}
-
-func (s *AsyncFileStore) AppendServiceCheck(
-	ctx context.Context,
-	serviceName string,
-	successfull bool,
-) (*ServiceSLA, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.currentState.AppendServiceCheck(serviceName, successfull)
-}
-
-func (s *AsyncFileStore) GetContestState(ctx context.Context) (*State, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.currentState.GetContestState(), nil
-}
-
-func (s *AsyncFileStore) SetContestState(
-	ctx context.Context,
-	newState *State,
-) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.currentState.SetContestState(newState)
-	return nil
-}
-
-func (s *AsyncFileStore) Flush(ctx context.Context) error {
-	return s.storage.UpdateState(ctx, func(state *storageState) error {
-		*state = s.currentState.Clone()
-		return nil
-	})
-}
-
 func (s *AsyncFileStore) Run(ctx context.Context) error {
 	for {
 		select {
@@ -435,34 +369,68 @@ func (s *AsyncFileStore) Run(ctx context.Context) error {
 	}
 }
 
-func (s *AsyncFileStore) AppendCheckerData(
-	ctx context.Context,
-	serviceName string,
-	data []byte,
-) error {
+func (s *AsyncFileStore) GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*CheckerSLA, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.currentState.AppendCheckerData(serviceName, data)
+	return s.currentState.GetCheckerSLA(checkerID)
 }
 
-func (s *AsyncFileStore) GetCheckerDataPool(
+func (s *AsyncFileStore) AppendCheck(
 	ctx context.Context,
-	serviceName string,
-) ([][]byte, error) {
+	checkerID hazycheck.CheckerID,
+	successfull bool,
+) (*CheckerSLA, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.currentState.GetCheckerDataPool(serviceName)
+	return s.currentState.AppendCheck(checkerID, successfull)
+}
+
+func (s *AsyncFileStore) AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.currentState.AppendCheckerData(checkerID, data)
+}
+
+func (s *AsyncFileStore) GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.currentState.GetCheckerDataPool(checkerID)
 }
 
 func (s *AsyncFileStore) RemoveDataFromPool(
 	ctx context.Context,
-	servicieName string,
+	checkerID hazycheck.CheckerID,
 	idx uint64,
 ) ([]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.currentState.RemoveDataFromPool(servicieName, idx)
+	return s.currentState.RemoveDataFromPool(checkerID, idx)
+}
+
+func (s *AsyncFileStore) GetContestState(ctx context.Context) (*State, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	st := s.currentState.GetContestState()
+	return st, nil
+}
+
+func (s *AsyncFileStore) SetContestState(ctx context.Context, newState *State) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.currentState.SetContestState(newState)
+	return nil
+}
+
+func (s *AsyncFileStore) Flush(ctx context.Context) error {
+	return s.storage.UpdateState(ctx, func(state *storageState) error {
+		*state = s.currentState.Clone()
+		return nil
+	})
 }

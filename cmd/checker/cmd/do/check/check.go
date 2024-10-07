@@ -54,14 +54,13 @@ var CheckCmd = &cobra.Command{
 				"Method:       Checker.Check\n"+
 				"Duration:     %s\n"+
 				"Output:       %s\n",
-			service, target, duration, string(data),
+			service, checkerName, target, duration, string(data),
 		)
 		return nil
 	},
 }
 
 func init() {
-	// CheckCmd.MarkPersistentFlagRequired("checker")
-	// CheckCmd.MarkPersistentFlagRequired("service")
-	// CheckCmd.MarkPersistentFlagRequired("target")
+	CheckCmd.Flags().StringVarP(&checkerName, "checker", "c", "", "specifies the checker name to be run")
+	CheckCmd.MarkFlagRequired("checker")
 }

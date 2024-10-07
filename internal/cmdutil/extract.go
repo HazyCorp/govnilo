@@ -24,23 +24,22 @@ func ExtractFxOpts(ctx context.Context) []fx.Option {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ExtractCheckers(enableLogs bool) ([]hazycheck.Checker, error) {
-	var withLogger fx.Option
-	if !enableLogs {
-		withLogger = fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.NopLogger
-		})
-	} else {
-		withLogger = fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: l}
-		})
+func buildFXLogger(enabled bool) fx.Option {
+	if !enabled {
+		return fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger })
 	}
 
+	return fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
+		return &fxevent.ZapLogger{Logger: l}
+	})
+}
+
+func ExtractCheckers(enableFXLogs bool) ([]hazycheck.Checker, error) {
 	fxOpts := []fx.Option{
 		fx.Provide(
 			fxbuild.GetConstructors()...,
 		),
-		withLogger,
+		buildFXLogger(enableFXLogs),
 	}
 
 	type checkersIn struct {
@@ -63,24 +62,12 @@ func ExtractCheckers(enableLogs bool) ([]hazycheck.Checker, error) {
 	return registeredCheckers, nil
 }
 
-func ExtractSploits(enableLogs bool) ([]hazycheck.Sploit, error) {
-	// TODO: remove boilerplate, maybe use global flag
-	var withLogger fx.Option
-	if !enableLogs {
-		withLogger = fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.NopLogger
-		})
-	} else {
-		withLogger = fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: l}
-		})
-	}
-
+func ExtractSploits(enableFXLogs bool) ([]hazycheck.Sploit, error) {
 	fxOpts := []fx.Option{
 		fx.Provide(
 			fxbuild.GetConstructors()...,
 		),
-		withLogger,
+		buildFXLogger(enableFXLogs),
 	}
 
 	type sploitsIn struct {

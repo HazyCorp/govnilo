@@ -14,7 +14,10 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/hazycheck"
 )
 
-var data string
+var (
+	data        string
+	checkerName string
+)
 
 var GetCmd = &cobra.Command{
 	Use:   "get",
@@ -27,9 +30,11 @@ var GetCmd = &cobra.Command{
 
 		target := globflags.Target
 		service := globflags.Service
+		checkerName := checkerName
+
 		checkerID := hazycheck.CheckerID{
 			Service: service,
-			Name:    globflags.CheckerName,
+			Name:    checkerName,
 		}
 
 		checker, exists := lo.Find(checkers, func(c hazycheck.Checker) bool {
@@ -52,7 +57,7 @@ var GetCmd = &cobra.Command{
 				"Target:       %s\n"+
 				"Method:       Checker.Get\n"+
 				"Duration:     %s\n",
-			service, target, duration,
+			service, checkerName, target, duration,
 		)
 		return nil
 	},
@@ -63,6 +68,6 @@ func init() {
 		StringVarP(&data, "data", "d", "", "use this flag to provide data, returned from Checker.Check method")
 	GetCmd.MarkFlagRequired("data")
 
-	// GetCmd.MarkPersistentFlagRequired("service")
-	// GetCmd.MarkPersistentFlagRequired("target")
+	GetCmd.Flags().StringVarP(&checkerName, "checker", "c", "", "specifies the checker name to be run")
+	GetCmd.MarkFlagRequired("checker")
 }
