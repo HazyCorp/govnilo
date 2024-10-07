@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/HazyCorp/govnilo"
+	"github.com/HazyCorp/govnilo/govnilo"
 )
 
 func init() {
