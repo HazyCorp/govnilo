@@ -72,7 +72,7 @@ func NewSaveStrategy() (checkerctrl.SaveStrategy, error) {
 func GetConstructors() []interface{} {
 	return append(
 		registrar.GetRegistered(),
-		fxutil.AsIface[hazycheck.Provider](hazycheck.NewDummyProvider),
+		// fxutil.AsIface[hazycheck.Provider](hazycheck.NewDummyProvider),
 		configuration.Read,
 		NewLogger,
 		NewGRPCServer,

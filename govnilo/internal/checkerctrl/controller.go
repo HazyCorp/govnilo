@@ -39,6 +39,9 @@ type Controller struct {
 	sploitMetricsMu sync.RWMutex
 	sploitMetrics   map[hazycheck.SploitID]*sploitMetrics
 
+	providersMu     sync.RWMutex
+	cachedProviders map[string]hazycheck.Connector
+
 	rr *raterunner.RateRunner
 }
 
@@ -75,6 +78,8 @@ func New(in ControllerIn) *Controller {
 		strategy:           in.Strategy,
 		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics),
 		sploitMetrics:      make(map[hazycheck.SploitID]*sploitMetrics),
+
+		cachedProviders: make(map[string]hazycheck.Connector),
 	}
 }
 
@@ -380,6 +385,32 @@ func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate
 	}
 
 	return nil
+}
+
+func (c *Controller) providerForService(id string) hazycheck.Connector {
+	p := func() hazycheck.Connector {
+		c.providersMu.RLock()
+		defer c.providersMu.RUnlock()
+
+		return c.cachedProviders[id]
+	}()
+
+	if p != nil {
+		// provider found, return it
+		return p
+	}
+
+	// provider not found, create it
+	c.providersMu.Lock()
+	defer c.providersMu.Unlock()
+
+	if p, exists := c.cachedProviders[id]; exists {
+		return p
+	}
+
+	p = hazycheck.NewConnector(id)
+	c.cachedProviders[id] = p
+	return p
 }
 
 func (c *Controller) waitFor(ctx context.Context, d time.Duration) error {

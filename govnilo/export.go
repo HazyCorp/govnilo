@@ -11,7 +11,7 @@ type (
 	Sploit    = hazycheck.Sploit
 	SploitID  = hazycheck.SploitID
 
-	Provider = hazycheck.Provider
+	Provider = hazycheck.Connector
 )
 
 var (
