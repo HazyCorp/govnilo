@@ -1,9 +1,10 @@
 package list
 
 import (
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/list/checkers"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/list/sploits"
 	"github.com/spf13/cobra"
+
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/list/checkers"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/list/sploits"
 )
 
 var ListCmd = &cobra.Command{

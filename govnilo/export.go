@@ -1,7 +1,7 @@
 package govnilo
 
 import (
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd"
 	"github.com/HazyCorp/govnilo/govnilo/internal/hazycheck"
 )
 

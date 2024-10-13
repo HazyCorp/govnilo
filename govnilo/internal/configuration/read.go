@@ -2,13 +2,14 @@ package configuration
 
 import (
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
 	"gopkg.in/yaml.v3"
 
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/metricsrv"
 )
 
@@ -21,8 +22,30 @@ type Config struct {
 	Metrics        metricsrv.Config                 `json:"metrics"          yaml:"metrics"`
 }
 
+func defaultConfig() *Config {
+	return &Config{
+		Serve: Serve{
+			Port: 13337,
+		},
+		AsyncFileStore: checkerctrl.AsyncFileStoreConfig{
+			Path:         "/tmp/checker_state.bin",
+			SyncInterval: time.Second,
+		},
+		Controller: checkerctrl.Config{
+			SyncInterval: time.Second,
+		},
+		Metrics: metricsrv.Config{
+			Port: 14448,
+		},
+	}
+}
+
 func Read() (Config, error) {
 	confPath := globflags.ConfigPath
+
+	if confPath == "" {
+		return *defaultConfig(), nil
+	}
 
 	data, err := os.ReadFile(confPath)
 	if err != nil {

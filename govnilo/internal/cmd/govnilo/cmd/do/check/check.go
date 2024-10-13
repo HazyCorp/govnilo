@@ -9,7 +9,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/globflags"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/govnilo/internal/hazycheck"
 )

@@ -9,8 +9,8 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/checkerserver"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/fxbuild"
 	"github.com/HazyCorp/govnilo/govnilo/internal/metricsrv"
 )
@@ -69,6 +69,13 @@ var RunCmd = &cobra.Command{
 }
 
 func init() {
-	RunCmd.Flags().StringVarP(&globflags.ConfigPath, "config", "c", "", "path to config for checker run")
-	RunCmd.MarkFlagRequired("config")
+	RunCmd.
+		Flags().
+		StringVarP(
+			&globflags.ConfigPath,
+			"config",
+			"c",
+			"",
+			"path to config for checker run. If config is not specifed, the default one will be used.",
+		)
 }

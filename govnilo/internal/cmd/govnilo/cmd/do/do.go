@@ -3,10 +3,10 @@ package do
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/do/check"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/do/get"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/do/sploit"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/globflags"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/do/check"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/do/get"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/do/sploit"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/globflags"
 )
 
 var DoCmd = &cobra.Command{

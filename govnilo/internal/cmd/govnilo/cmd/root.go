@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/do"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/list"
-	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/cmd/run"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/do"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/list"
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/cmd/run"
 	"github.com/HazyCorp/govnilo/govnilo/internal/util"
 )
 

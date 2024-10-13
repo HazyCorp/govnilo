@@ -1,10 +1,11 @@
 package sploits
 
 import (
-	"github.com/HazyCorp/govnilo/govnilo/internal/cmdutil"
-	"github.com/HazyCorp/govnilo/govnilo/internal/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/HazyCorp/govnilo/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/govnilo/internal/util"
 )
 
 var ListSploitsCmd = &cobra.Command{
