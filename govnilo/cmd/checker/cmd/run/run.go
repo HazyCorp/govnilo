@@ -12,6 +12,7 @@ import (
 	"github.com/HazyCorp/govnilo/govnilo/cmd/checker/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/checkerserver"
 	"github.com/HazyCorp/govnilo/govnilo/internal/fxbuild"
+	"github.com/HazyCorp/govnilo/govnilo/internal/metricsrv"
 )
 
 var RunCmd = &cobra.Command{
@@ -34,7 +35,7 @@ var RunCmd = &cobra.Command{
 			fx.Populate(&e),
 
 			fx.Invoke(
-				func(*checkerserver.CheckerServer) {},
+				func(*checkerserver.CheckerServer, *metricsrv.Server) {},
 			),
 
 			fx.WithLogger(func(l *zap.Logger) fxevent.Logger {

@@ -8,7 +8,7 @@ import (
 	"github.com/HazyCorp/govnilo/govnilo/internal/hazycheck"
 )
 
-// example state (represented in yaml)
+// example settings (represented in yaml)
 // ...
 // state:
 //   services:
@@ -44,33 +44,42 @@ type Rate struct {
 	Per   time.Duration
 }
 
-type SploitState struct {
+type SploitSettings struct {
 	Rate Rate
 }
 
-type CheckerState struct {
-	Check CheckerCheckState
-	Get   CheckerGetState
+type CheckerSettings struct {
+	Check CheckerCheckSettings
+	Get   CheckerGetSettings
 }
 
-type CheckerGetState struct {
+type CheckerGetSettings struct {
 	Rate Rate
 }
 
-type CheckerCheckState struct {
+type CheckerCheckSettings struct {
 	Rate Rate
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type ServiceState struct {
+type ServiceSettings struct {
 	Target   string
-	Checkers map[string]CheckerState
-	Sploits  map[string]SploitState
+	Checkers map[string]*CheckerSettings
+	Sploits  map[string]*SploitSettings
 }
 
-func (s *ServiceState) Clone() ServiceState {
-	return ServiceState{
+func (s *ServiceSettings) Init() {
+	s.Checkers = make(map[string]*CheckerSettings)
+	s.Sploits = make(map[string]*SploitSettings)
+}
+
+func (s *ServiceSettings) Clone() ServiceSettings {
+	if s == nil {
+		return ServiceSettings{}
+	}
+
+	return ServiceSettings{
 		Target:   s.Target,
 		Checkers: maps.Clone(s.Checkers),
 		Sploits:  maps.Clone(s.Sploits),
@@ -79,17 +88,26 @@ func (s *ServiceState) Clone() ServiceState {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type State struct {
-	Services map[string]ServiceState
+type Settings struct {
+	Services map[string]*ServiceSettings
 }
 
-func (s *State) Clone() State {
-	services := make(map[string]ServiceState, len(s.Services))
-	for k, v := range s.Services {
-		services[k] = v.Clone()
+func (s *Settings) Init() {
+	s.Services = make(map[string]*ServiceSettings)
+}
+
+func (s *Settings) Clone() *Settings {
+	if s == nil {
+		return nil
 	}
 
-	return State{Services: services}
+	services := make(map[string]*ServiceSettings, len(s.Services))
+	for k, v := range s.Services {
+		svc := v.Clone()
+		services[k] = &svc
+	}
+
+	return &Settings{Services: services}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,8 +135,8 @@ type ControllerStorage interface {
 		idx uint64,
 	) ([]byte, error)
 
-	GetContestState(ctx context.Context) (*State, error)
-	SetContestState(ctx context.Context, newState *State) error
+	GetContestState(ctx context.Context) (*Settings, error)
+	SetContestState(ctx context.Context, newState *Settings) error
 
 	Flush(ctx context.Context) error
 }

@@ -13,11 +13,12 @@ services:
       - vmagentdata:/vmagentdata
       - ./vmconfigs/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
-      - "--promscrape.config=/etc/prometheus/prometheus.yml"
-      - "--remoteWrite.url=http://victoriametrics:8428/api/v1/write"
+      - "-loggerFormat=json"
+      - "-promscrape.config=/etc/prometheus/prometheus.yml"
+      - "-remoteWrite.url=http://victoriametrics:8428/api/v1/write"
     networks:
       - vm_net
-    restart: always
+    restart: unless-stopped
 
   # VictoriaMetrics instance, a single process responsible for
   # storing metrics and serve read requests.
@@ -29,21 +30,18 @@ services:
     volumes:
       - vmdata:/storage
     command:
-      - "--storageDataPath=/storage"
-      - "--httpListenAddr=:8428"
+      - "-loggerFormat=json"
+      - "-storageDataPath=/storage"
+      - "-httpListenAddr=:8428"
     networks:
       - vm_net
-    restart: always
+    restart: unless-stopped 
 
   # Grafana instance configured with VictoriaMetrics as datasource
   grafana:
     container_name: grafana
-    image: grafana/grafana:10.3.1
-    entrypoint: [ "/bin/bash", "-c" ]
-    command: [ "chmod +x /download.sh && /download.sh && /run.sh" ]
-    environment:
-      - GF_INSTALL_PLUGINS=https://github.com/VictoriaMetrics/grafana-datasource/releases/download/v0.8.2/victoriametrics-datasource-v0.8.2.zip;victoriametrics-datasource
-      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victoriametrics-datasource
+    build:
+      context: ./grafana
     depends_on:
       - "victoriametrics"
     ports:
@@ -56,7 +54,7 @@ services:
       - ./vmconfigs/download.sh:/download.sh
     networks:
       - vm_net
-    restart: always
+    restart: unless-stopped 
   
   checker:
     container_name: checker
@@ -64,8 +62,8 @@ services:
       dockerfile: ./dev_infra/checker/Dockerfile
       context: ../
     volumes:
-      - ../src/cmd/checker/config_example.yaml:/config.yaml
-    restart: always
+      - ../example/checker_config.yaml:/config.yaml
+    restart: unless-stopped 
     ports:
       - 15559:15559
       - 14448:14448

@@ -138,22 +138,22 @@ func (s *CheckerServer) GetSLA(ctx context.Context, req *pb.GetSLAReq) (*pb.GetS
 	}, nil
 }
 
-func pbToState(in *pb.State) checkerctrl.State {
-	services := make(map[string]checkerctrl.ServiceState, len(in.Services))
+func pbToState(in *pb.State) checkerctrl.Settings {
+	services := make(map[string]*checkerctrl.ServiceSettings, len(in.Services))
 	for name, state := range in.GetServices() {
 		serviceState := pbToCheckerState(state)
-		services[name] = *serviceState
+		services[name] = serviceState
 	}
 
-	return checkerctrl.State{
+	return checkerctrl.Settings{
 		Services: services,
 	}
 }
 
-func stateToPb(in *checkerctrl.State) *pb.State {
+func stateToPb(in *checkerctrl.Settings) *pb.State {
 	services := make(map[string]*pb.ServiceState, len(in.Services))
 	for name, state := range in.Services {
-		pbState := checkerStateToPB(&state)
+		pbState := checkerStateToPB(state)
 		services[name] = pbState
 	}
 
@@ -176,27 +176,27 @@ func rateToPb(r *checkerctrl.Rate) *pb.Rate {
 	}
 }
 
-func pbToCheckerState(in *pb.ServiceState) *checkerctrl.ServiceState {
-	sploits := make(map[string]checkerctrl.SploitState, len(in.GetSploits()))
+func pbToCheckerState(in *pb.ServiceState) *checkerctrl.ServiceSettings {
+	sploits := make(map[string]*checkerctrl.SploitSettings, len(in.GetSploits()))
 	for sploitName, sploit := range in.GetSploits() {
-		sploits[sploitName] = checkerctrl.SploitState{
+		sploits[sploitName] = &checkerctrl.SploitSettings{
 			Rate: pbToRate(sploit.Rate),
 		}
 	}
 
-	checkers := make(map[string]checkerctrl.CheckerState, len(in.GetCheckers()))
+	checkers := make(map[string]*checkerctrl.CheckerSettings, len(in.GetCheckers()))
 	for checkerName, checker := range in.GetCheckers() {
-		checkers[checkerName] = checkerctrl.CheckerState{
-			Check: checkerctrl.CheckerCheckState{
+		checkers[checkerName] = &checkerctrl.CheckerSettings{
+			Check: checkerctrl.CheckerCheckSettings{
 				Rate: pbToRate(checker.Check.Rate),
 			},
-			Get: checkerctrl.CheckerGetState{
+			Get: checkerctrl.CheckerGetSettings{
 				Rate: pbToRate(checker.Get.Rate),
 			},
 		}
 	}
 
-	serviceState := checkerctrl.ServiceState{
+	serviceState := checkerctrl.ServiceSettings{
 		Target:   in.GetTarget(),
 		Sploits:  sploits,
 		Checkers: checkers,
@@ -205,7 +205,7 @@ func pbToCheckerState(in *pb.ServiceState) *checkerctrl.ServiceState {
 	return &serviceState
 }
 
-func checkerStateToPB(in *checkerctrl.ServiceState) *pb.ServiceState {
+func checkerStateToPB(in *checkerctrl.ServiceSettings) *pb.ServiceState {
 	sploits := make(map[string]*pb.SploitState, len(in.Sploits))
 	for sploitName, sploit := range in.Sploits {
 		sploits[sploitName] = &pb.SploitState{

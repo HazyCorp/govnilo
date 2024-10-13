@@ -166,7 +166,7 @@ func (c *Controller) genSploitRunAttackTask(
 
 func (c *Controller) genCheckerCheckTask(
 	checker hazycheck.Checker,
-	svc *ServiceState,
+	svc *ServiceSettings,
 ) raterunner.TaskFunc {
 	m := c.checkerMetricsFor(checker.CheckerID())
 
@@ -210,7 +210,7 @@ func (c *Controller) genCheckerCheckTask(
 
 func (c *Controller) genCheckerGetTask(
 	checker hazycheck.Checker,
-	svc *ServiceState,
+	svc *ServiceSettings,
 ) raterunner.TaskFunc {
 	m := c.checkerMetricsFor(checker.CheckerID())
 
@@ -313,7 +313,7 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 
 			checkerTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "check")
-			checkerTask := c.genCheckerCheckTask(checker, &svc)
+			checkerTask := c.genCheckerCheckTask(checker, svc)
 			if err := c.setTaskRate(checkerTaskName, checkerTask, checkerState.Check.Rate); err != nil {
 				errlist = multierror.Append(
 					errlist,
@@ -323,7 +323,7 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 
 			getterTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "get")
-			getterTask := c.genCheckerGetTask(checker, &svc)
+			getterTask := c.genCheckerGetTask(checker, svc)
 			if err := c.setTaskRate(getterTaskName, getterTask, checkerState.Get.Rate); err != nil {
 				errlist = multierror.Append(
 					errlist,
