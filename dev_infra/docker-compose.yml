@@ -56,16 +56,14 @@ services:
       - vm_net
     restart: unless-stopped 
   
-  checker:
-    container_name: checker
+  example:
+    container_name: example 
     build:
-      dockerfile: ./dev_infra/checker/Dockerfile
+      dockerfile: ./dev_infra/example-checker/Dockerfile
       context: ../
-    volumes:
-      - ../example/checker_config.yaml:/config.yaml
     restart: unless-stopped 
     ports:
-      - 15559:15559
+      - 13337:13337
       - 14448:14448
     networks:
       - vm_net

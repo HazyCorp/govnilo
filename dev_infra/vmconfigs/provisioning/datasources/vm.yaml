@@ -18,4 +18,5 @@ datasources:
     # <string> Sets the pre-selected datasource for new panels.
     # You can set only one default data source per organization.
     isDefault: true
-    timeInterval: 5s
+    jsonData:
+      timeInterval: 10s

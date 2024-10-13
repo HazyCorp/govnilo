@@ -1,8 +1,12 @@
 FROM grafana/grafana:10.4.2-ubuntu as grafana
 
+USER root
+
 COPY grafana.ini /etc/grafana/grafana.ini
 
-RUN grafana cli --pluginUrl https://github.com/VictoriaMetrics/victoriametrics-datasource/releases/download/v0.8.2/victoriametrics-datasource-v0.8.2.zip --pluginsDir ${GF_PATHS_PLUGINS} plugins install victoriametrics-datasource
+ENV GF_PATHS_PLUGINS=/usr/share/grafana/plugins/
 
-RUN grafana cli --pluginUrl  https://github.com/VictoriaMetrics/victorialogs-datasource/releases/download/v0.2.1/victorialogs-datasource-v0.2.1.zip  --pluginsDir ${GF_PATHS_PLUGINS} plugins install victorialogs-datasource
+RUN mkdir -p $GF_PATHS_PLUGINS
+
+RUN grafana cli --pluginsDir ${GF_PATHS_PLUGINS} --pluginUrl https://github.com/VictoriaMetrics/victoriametrics-datasource/releases/download/v0.8.2/victoriametrics-datasource-v0.8.2.zip plugins install victoriametrics-datasource
 
