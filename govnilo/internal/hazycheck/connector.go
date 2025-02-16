@@ -47,7 +47,7 @@ func NewConnector(svc string) *connectorImpl {
 // have the default timeout (5s) on requests to avoid dangling checks. Also,
 // client's transport will be instrumented, that will allow us to get some metrics
 // about service/checker state
-func (c *connectorImpl) GetHTTPClient() *http.Client {
+func (c *connectorImpl) GetHTTPClient() (*http.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		panic("unreachable: cannot create cookie jar")
@@ -60,7 +60,7 @@ func (c *connectorImpl) GetHTTPClient() *http.Client {
 
 		// TODO: move values to configuration
 		Timeout: clientTimeout,
-	}
+	}, nil
 }
 
 type instrumentedRoundTripper struct {

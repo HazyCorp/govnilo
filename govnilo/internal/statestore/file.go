@@ -9,14 +9,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type defaultFunc[TState any] func() TState
+
 type JsonFile[TState any] struct {
 	mu sync.Mutex
 
-	path string
+	defaultVal defaultFunc[TState]
+	path       string
 }
 
-func NewJsonFile[TState any](path string) *JsonFile[TState] {
-	return &JsonFile[TState]{path: path}
+func NewJsonFile[TState any](path string, defaultVal defaultFunc[TState]) *JsonFile[TState] {
+	return &JsonFile[TState]{path: path, defaultVal: defaultVal}
 }
 
 func (j *JsonFile[TState]) RetrieveState(ctx context.Context) (TState, error) {
@@ -84,7 +87,8 @@ func (j *JsonFile[TState]) operationWithFile(f func(f *os.File) error) error {
 }
 
 func (j *JsonFile[TState]) retrieveState() (TState, error) {
-	var state TState
+	state := j.defaultVal()
+
 	err := j.operationWithFile(func(f *os.File) error {
 		stat, err := f.Stat()
 		if err != nil {

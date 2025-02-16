@@ -18,6 +18,13 @@ type internalState struct {
 	Settings       *Settings
 }
 
+func defaultInternalState() internalState {
+	return internalState{
+		ServiceToState: make(map[string]*serviceState),
+		Settings:       &Settings{Services: make(map[string]*ServiceSettings)},
+	}
+}
+
 func (s *internalState) Init() {
 	s.Settings = &Settings{}
 	s.Settings.Init()
@@ -90,7 +97,7 @@ func (s *checkerState) Clone() *checkerState {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type AsyncFileStoreConfig struct {
-	Path         string        `yaml:"path" json:"path"`
+	Path         string        `yaml:"path"          json:"path"`
 	SyncInterval time.Duration `yaml:"sync_interval" json:"sync_interval"`
 }
 
@@ -112,7 +119,7 @@ type AsyncFileStore struct {
 }
 
 func NewAsyncFileStore(in AsyncFileStoreIn) (*AsyncFileStore, error) {
-	store := statestore.NewJsonFile[internalState](in.Config.Path)
+	store := statestore.NewJsonFile(in.Config.Path, defaultInternalState)
 
 	lastState, err := store.RetrieveState(context.Background())
 	if err != nil {
@@ -168,7 +175,10 @@ func (s *AsyncFileStore) run() {
 	}
 }
 
-func (s *AsyncFileStore) GetCheckerSLA(ctx context.Context, checkerID hazycheck.CheckerID) (*CheckerSLA, error) {
+func (s *AsyncFileStore) GetCheckerSLA(
+	ctx context.Context,
+	checkerID hazycheck.CheckerID,
+) (*CheckerSLA, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -207,7 +217,11 @@ func (s *AsyncFileStore) AppendCheck(
 	return &sla, nil
 }
 
-func (s *AsyncFileStore) AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error {
+func (s *AsyncFileStore) AppendCheckerData(
+	ctx context.Context,
+	checkerID hazycheck.CheckerID,
+	data []byte,
+) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -221,7 +235,10 @@ func (s *AsyncFileStore) AppendCheckerData(ctx context.Context, checkerID hazych
 }
 
 // TODO: use more synchronious interface (need to delete entries under the lock)
-func (s *AsyncFileStore) GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error) {
+func (s *AsyncFileStore) GetCheckerDataPool(
+	ctx context.Context,
+	checkerID hazycheck.CheckerID,
+) ([][]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -293,7 +310,9 @@ func (s *AsyncFileStore) Flush(ctx context.Context) error {
 	})
 }
 
-func (s *AsyncFileStore) getCheckerStateLocked(checkerID hazycheck.CheckerID) (*checkerState, error) {
+func (s *AsyncFileStore) getCheckerStateLocked(
+	checkerID hazycheck.CheckerID,
+) (*checkerState, error) {
 	svcState, found := s.lastState.ServiceToState[checkerID.Service]
 	if !found {
 		return nil, errors.Errorf("cannot find state of the %+v checker", checkerID)
@@ -307,7 +326,9 @@ func (s *AsyncFileStore) getCheckerStateLocked(checkerID hazycheck.CheckerID) (*
 	return chckrState, nil
 }
 
-func (s *AsyncFileStore) getOrCreateCheckerStateLocked(checkerID hazycheck.CheckerID) (*checkerState, error) {
+func (s *AsyncFileStore) getOrCreateCheckerStateLocked(
+	checkerID hazycheck.CheckerID,
+) (*checkerState, error) {
 	svcState, found := s.lastState.ServiceToState[checkerID.Service]
 	if !found {
 		newState := &serviceState{}

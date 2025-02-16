@@ -9,6 +9,7 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
+	"github.com/HazyCorp/govnilo/govnilo/internal/checkerctrl"
 	"github.com/HazyCorp/govnilo/govnilo/internal/checkerserver"
 	"github.com/HazyCorp/govnilo/govnilo/internal/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/govnilo/internal/fxbuild"
@@ -20,12 +21,10 @@ var RunCmd = &cobra.Command{
 	Short: "runs the checker as a standalone service",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-
 		constructors := fxbuild.GetConstructors()
 
 		var e struct {
 			fx.In
-
 			Logger *zap.Logger
 		}
 
@@ -35,7 +34,7 @@ var RunCmd = &cobra.Command{
 			fx.Populate(&e),
 
 			fx.Invoke(
-				func(*checkerserver.CheckerServer, *metricsrv.Server) {},
+				func(*checkerserver.CheckerServer, *metricsrv.Server, *checkerctrl.Controller) {},
 			),
 
 			fx.WithLogger(func(l *zap.Logger) fxevent.Logger {

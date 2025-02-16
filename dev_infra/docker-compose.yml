@@ -1,25 +1,4 @@
 services:
-  #  Metrics collector.
-  #  It scrapes targets defined in --promscrape.config
-  #  And forward them to --remoteWrite.url
-  vmagent:
-    container_name: vmagent
-    image: victoriametrics/vmagent:v1.101.0
-    depends_on:
-      - "victoriametrics"
-    ports:
-      - 8429:8429
-    volumes:
-      - vmagentdata:/vmagentdata
-      - ./vmconfigs/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - "-loggerFormat=json"
-      - "-promscrape.config=/etc/prometheus/prometheus.yml"
-      - "-remoteWrite.url=http://victoriametrics:8428/api/v1/write"
-    networks:
-      - vm_net
-    restart: unless-stopped
-
   # VictoriaMetrics instance, a single process responsible for
   # storing metrics and serve read requests.
   victoriametrics:
@@ -29,8 +8,10 @@ services:
       - 8428:8428
     volumes:
       - vmdata:/storage
+      - ./vmconfigs/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "-loggerFormat=json"
+      - "-promscrape.config=/etc/prometheus/prometheus.yml"
       - "-storageDataPath=/storage"
       - "-httpListenAddr=:8428"
     networks:
@@ -63,10 +44,16 @@ services:
       context: ../
     restart: unless-stopped 
     ports:
-      - 13337:13337
       - 14448:14448
+      - 15559:15559
     networks:
       - vm_net
+    volumes:
+      - ./checker-config.yaml:/etc/checker-config.yaml
+    command:
+      - "--config=/etc/checker-config.yaml"
+    environment:
+      ENVIRONMENT: prod
 
 volumes:
   vmagentdata: {}

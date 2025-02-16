@@ -15,7 +15,6 @@ import (
 	"github.com/HazyCorp/govnilo/govnilo/internal/configuration"
 	"github.com/HazyCorp/govnilo/govnilo/internal/fxutil"
 	grpcutil "github.com/HazyCorp/govnilo/govnilo/internal/grpcutil"
-	"github.com/HazyCorp/govnilo/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/govnilo/internal/metricsrv"
 	"github.com/HazyCorp/govnilo/govnilo/internal/registrar"
 )
@@ -38,8 +37,7 @@ func NewGRPCServer(l *zap.Logger, c configuration.Serve, lc fx.Lifecycle) *grpc.
 		func() {
 			grpcSrv.GracefulStop()
 		},
-	),
-	)
+	))
 	return grpcSrv
 }
 

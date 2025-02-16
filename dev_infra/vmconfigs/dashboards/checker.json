@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 1,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -92,8 +92,7 @@
               }
             ]
           },
-          "unit": "reqps",
-          "unitScale": true
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -123,7 +122,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(rate(runs_total{method=\"check\"}[1m])) by (service)",
+          "expr": "sum(rate(checker_runs_total{method=\"check\"}[$__rate_interval])) by (service)",
           "legendFormat": "{{service}}",
           "range": true,
           "refId": "A"
@@ -189,8 +188,7 @@
               }
             ]
           },
-          "unit": "reqps",
-          "unitScale": true
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -220,7 +218,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum (rate(runs_total{method=\"get\"}[1m])) by (service)",
+          "expr": "sum(rate(checker_runs_total{method=\"get\"}[$__rate_interval])) by (service)",
           "legendFormat": "{{service}}",
           "range": true,
           "refId": "A"
@@ -287,8 +285,7 @@
               }
             ]
           },
-          "unit": "percent",
-          "unitScale": true
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -318,7 +315,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "(sum(runs_total{status=\"success\"}) by (service) / sum(runs_total) by (service)) * 100",
+          "expr": "(sum(increase(checker_runs_total{status=\"success\"}[7d])) by (service) / sum(increase(checker_runs_total[7d])) by (service)) * 100",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -366,8 +363,7 @@
               }
             ]
           },
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -394,7 +390,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.1",
+      "pluginVersion": "10.4.2",
       "targets": [
         {
           "datasource": {
@@ -402,8 +398,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(runs_total{status=\"success\", service=\"$service\"}) by (service) / sum (runs_total{service=\"$service\"}) by (service)",
-          "legendFormat": "__auto",
+          "expr": "sum(checker_runs_total{status=\"success\", service=~\"$service\"}) by (service, method) / sum (checker_runs_total{service=~\"$service\"}) by (service, method)",
+          "legendFormat": "{{ service }} ({{ method }})",
           "range": true,
           "refId": "A"
         }
@@ -468,8 +464,7 @@
               }
             ]
           },
-          "unit": "reqps",
-          "unitScale": true
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -499,8 +494,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum (rate (runs_total{service=\"$service\"}[1m])) by (method)",
-          "legendFormat": "{{method}}",
+          "expr": "sum(rate(checker_runs_total{service=~\"$service\"}[$__rate_interval])) by (method, service)",
+          "legendFormat": "{{service}} ({{method}})",
           "range": true,
           "refId": "A"
         }
@@ -565,8 +560,7 @@
               }
             ]
           },
-          "unit": "s",
-          "unitScale": true
+          "unit": "s"
         },
         "overrides": []
       },
@@ -596,8 +590,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.9, sum(rate(run_duration_bucket{method=\"check\", service=\"$service\"}[1m])) by (vmrange))",
-          "legendFormat": "0.9",
+          "expr": "histogram_quantile(0.9, sum(rate(checker_run_duration_bucket{method=\"check\", service=~\"$service\"}[$__rate_interval])) by (vmrange, service))",
+          "legendFormat": "{{service}} 0.9",
           "range": true,
           "refId": "A"
         },
@@ -607,9 +601,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(run_duration_bucket{method=\"check\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_quantile(0.99, sum(rate(checker_run_duration_bucket{method=\"check\", service=~\"$service\"}[$__rate_interval])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "0.99",
+          "legendFormat": "{{service}} 0.99",
           "range": true,
           "refId": "B"
         },
@@ -619,9 +613,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum(rate(run_duration_bucket{method=\"check\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_quantile(0.5, sum(rate(checker_run_duration_bucket{method=\"check\", service=~\"$service\"}[$__rate_interval])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "median",
+          "legendFormat": "{{service}} median",
           "range": true,
           "refId": "D"
         },
@@ -631,9 +625,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_avg(sum(rate(run_duration_bucket{method=\"check\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_avg(sum(rate(checker_run_duration_bucket{method=\"check\", service=~\"$service\"}[$__rate_interval])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "average",
+          "legendFormat": "{{service}} average",
           "range": true,
           "refId": "C"
         }
@@ -698,8 +692,7 @@
               }
             ]
           },
-          "unit": "s",
-          "unitScale": true
+          "unit": "s"
         },
         "overrides": []
       },
@@ -729,8 +722,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.9, sum(rate(run_duration_bucket{method=\"get\", service=\"$service\"}[1m])) by (vmrange))",
-          "legendFormat": "0.9",
+          "expr": "histogram_quantile(0.9, sum(rate(checker_run_duration_bucket{method=\"get\", service=~\"$service\"}[1m])) by (vmrange, service))",
+          "legendFormat": "{{service}} 0.9",
           "range": true,
           "refId": "A"
         },
@@ -740,9 +733,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(run_duration_bucket{method=\"get\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_quantile(0.99, sum(rate(checker_run_duration_bucket{method=\"get\", service=~\"$service\"}[1m])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "0.99",
+          "legendFormat": "{{service}} 0.99",
           "range": true,
           "refId": "B"
         },
@@ -752,9 +745,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum(rate(run_duration_bucket{method=\"get\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_quantile(0.5, sum(rate(checker_run_duration_bucket{method=\"get\", service=~\"$service\"}[1m])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "median",
+          "legendFormat": "{{service}} median",
           "range": true,
           "refId": "D"
         },
@@ -764,9 +757,9 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "histogram_avg(sum(rate(run_duration_bucket{method=\"get\", service=\"$service\"}[1m])) by (vmrange))",
+          "expr": "histogram_avg(sum(rate(checker_run_duration_bucket{method=\"get\", service=~\"$service\"}[1m])) by (vmrange, service))",
           "hide": false,
-          "legendFormat": "average",
+          "legendFormat": "{{service}} average",
           "range": true,
           "refId": "C"
         }
@@ -831,8 +824,7 @@
               }
             ]
           },
-          "unit": "reqps",
-          "unitScale": true
+          "unit": "reqps"
         },
         "overrides": [
           {
@@ -893,8 +885,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum (rate(runs_total{service=\"$service\", method=\"check\"}[1m])) by (status)",
-          "legendFormat": "{{status}}",
+          "expr": "sum(rate(checker_runs_total{service=~\"$service\", method=\"check\"}[$__rate_interval])) by (status, service)",
+          "legendFormat": "{{service}} ({{status}})",
           "range": true,
           "refId": "A"
         }
@@ -960,8 +952,7 @@
               }
             ]
           },
-          "unit": "reqps",
-          "unitScale": true
+          "unit": "reqps"
         },
         "overrides": [
           {
@@ -1022,8 +1013,8 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum (rate(runs_total{service=\"$service\", method=\"get\"}[1m])) by (status)",
-          "legendFormat": "{{status}}",
+          "expr": "sum(rate(checker_runs_total{service=~\"$service\", method=\"get\"}[$__rate_interval])) by (status)",
+          "legendFormat": "{{example}} ({{status}})",
           "range": true,
           "refId": "A"
         }
@@ -1038,16 +1029,21 @@
   "templating": {
     "list": [
       {
+        "allValue": ".*",
         "current": {
-          "selected": false,
-          "text": "example",
-          "value": "example"
+          "selected": true,
+          "text": "> .*",
+          "value": ".*"
+        },
+        "datasource": {
+          "type": "victoriametrics-datasource",
+          "uid": "P4169E866C3094E38"
         },
         "definition": "label_values(runs_total,service)",
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": "Service",
-        "multi": false,
+        "multi": true,
         "name": "service",
         "options": [],
         "query": {
@@ -1071,6 +1067,6 @@
   "timezone": "",
   "title": "Checker stats",
   "uid": "d80ae48c-30b6-457d-b591-8825e4c672d9",
-  "version": 9,
+  "version": 1,
   "weekStart": ""
 }

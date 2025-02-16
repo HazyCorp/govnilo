@@ -60,7 +60,7 @@ func NewFX(in CheckerServerIn, srv *grpc.Server) *CheckerServer {
 	return s
 }
 
-func (s *CheckerServer) SetCheckerState(
+func (s *CheckerServer) SetState(
 	ctx context.Context,
 	in *pb.SetStateReq,
 ) (*pb.SetStateRsp, error) {
