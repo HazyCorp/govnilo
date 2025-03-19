@@ -7,14 +7,14 @@ import (
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
 	"github.com/HazyCorp/govnilo/raterunner"
-	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	"log/slog"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"go.uber.org/fx"
 	"golang.org/x/sync/errgroup"
 )

@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/HazyCorp/govnilo/common/checkersettings"
 	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
-	"gopkg.in/yaml.v3"
 	"os"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
+	"gopkg.in/yaml.v3"
 )
 
 type FileSettingsProviderIn struct {

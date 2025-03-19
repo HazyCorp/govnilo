@@ -1,4 +1,4 @@
-package pkg
+package govnilo
 
 import (
 	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd"

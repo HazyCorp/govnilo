@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/hazyerr"
-	"github.com/hashicorp/go-multierror"
 	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 

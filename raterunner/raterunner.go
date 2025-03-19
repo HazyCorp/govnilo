@@ -5,12 +5,12 @@ import (
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/ratelimit"
 	"github.com/HazyCorp/govnilo/taskrunner"
-	"github.com/hashicorp/go-multierror"
 	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 

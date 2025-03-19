@@ -5,12 +5,12 @@ import (
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/metricsrv"
-	"gopkg.in/yaml.v3"
 	"os"
 	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
