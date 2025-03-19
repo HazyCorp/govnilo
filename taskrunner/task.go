@@ -2,12 +2,13 @@ package taskrunner
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/hazyerr"
 	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/HazyCorp/govnilo/common/hzlog"
+	"github.com/HazyCorp/govnilo/hazyerr"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -201,15 +202,21 @@ func (r *TaskRunner) UpdateTaskInstances(taskName string, instances int) error {
 				for {
 					err := task.Run(ctx)
 					if !instance.stopped.Load() {
-						l.Debug("task ended it's job with err, but task not stopped, restarting", hzlog.Error(err))
+						r.l.Debug(
+							"task ended it's job with err, but task not stopped, restarting",
+							hzlog.Error(err),
+							slog.String("task_name", taskName),
+						)
 						continue
 					}
 
-					l.Debug("task ended it's job with err, and task is stopped, stopping the routine", hzlog.Error(err))
+					r.l.Debug(
+						"task ended it's job with err, and task is stopped, stopping the routine",
+						hzlog.Error(err),
+						slog.String("task_name", taskName),
+					)
 
 					instance.errChan <- err
-					l.Debug("written error to the channel")
-
 					return
 				}
 			}()
@@ -229,6 +236,7 @@ func (r *TaskRunner) UpdateTaskInstances(taskName string, instances int) error {
 	var errlist *multierror.Error
 	for i := 0; i < toStop; i++ {
 		taskInstance := state.instances[len(state.instances)-1]
+		// TODO: use timeouts from some config
 		tCtx, tCancel := context.WithTimeout(r.baseContext, time.Second)
 		err := taskInstance.stop(tCtx)
 		tCancel()

@@ -2,7 +2,6 @@ package ratelimit
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/hzlog"
 	"math/rand"
 	"os"
 	"sort"
@@ -16,8 +15,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func new(times uint64, per time.Duration) *RateLimitter {
-	return New(hzlog.NopLogger(), RateLimitterSpec{Times: times, Per: per})
+func new(times uint64, per time.Duration) *Limiter {
+	return New(Spec{Times: times, Per: per})
 }
 
 func TestBlockedRateLimit(t *testing.T) {

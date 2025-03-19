@@ -119,9 +119,9 @@ type CheckerCheckSettings struct {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type ServiceSettings struct {
-	TargetPort uint32                      `json:"target_port" yaml:"target_port"`
-	Checkers   map[string]*CheckerSettings `json:"checkers" yaml:"checkers"`
-	Sploits    map[string]*SploitSettings  `json:"sploits" yaml:"sploits"`
+	Target   string                      `json:"target" yaml:"target"`
+	Checkers map[string]*CheckerSettings `json:"checkers" yaml:"checkers"`
+	Sploits  map[string]*SploitSettings  `json:"sploits" yaml:"sploits"`
 }
 
 func (s *ServiceSettings) Init() {
@@ -135,9 +135,9 @@ func (s *ServiceSettings) Clone() ServiceSettings {
 	}
 
 	return ServiceSettings{
-		TargetPort: s.TargetPort,
-		Checkers:   maps.Clone(s.Checkers),
-		Sploits:    maps.Clone(s.Sploits),
+		Target:   s.Target,
+		Checkers: maps.Clone(s.Checkers),
+		Sploits:  maps.Clone(s.Sploits),
 	}
 }
 

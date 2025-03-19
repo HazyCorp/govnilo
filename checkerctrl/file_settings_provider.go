@@ -2,9 +2,10 @@ package checkerctrl
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
 	"os"
+
+	"github.com/HazyCorp/govnilo/common/checkersettings"
+	"github.com/HazyCorp/govnilo/hazycheck"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -14,8 +15,8 @@ import (
 type FileSettingsProviderIn struct {
 	fx.In
 
-	Checkers []hazycheck2.Checker `group:"checkers"`
-	Sploits  []hazycheck2.Sploit  `group:"sploits"`
+	Checkers []hazycheck.Checker `group:"checkers"`
+	Sploits  []hazycheck.Sploit  `group:"sploits"`
 	Config   *FileSettingsProviderConfig
 }
 
@@ -27,17 +28,17 @@ var _ SettingsProvider = &FileSettingsProvider{}
 
 type FileSettingsProvider struct {
 	c        *FileSettingsProviderConfig
-	checkers map[hazycheck2.CheckerID]hazycheck2.Checker
-	sploits  map[hazycheck2.SploitID]hazycheck2.Sploit
+	checkers map[hazycheck.CheckerID]hazycheck.Checker
+	sploits  map[hazycheck.SploitID]hazycheck.Sploit
 }
 
 func NewFileSettingsProvider(in FileSettingsProviderIn) *FileSettingsProvider {
-	checkers := make(map[hazycheck2.CheckerID]hazycheck2.Checker)
+	checkers := make(map[hazycheck.CheckerID]hazycheck.Checker)
 	for _, c := range in.Checkers {
 		checkers[c.CheckerID()] = c
 	}
 
-	sploits := make(map[hazycheck2.SploitID]hazycheck2.Sploit)
+	sploits := make(map[hazycheck.SploitID]hazycheck.Sploit)
 	for _, s := range in.Sploits {
 		sploits[s.SploitID()] = s
 	}

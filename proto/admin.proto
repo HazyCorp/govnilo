@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "github.com/HazyCorp/hzc/proto";
+
+import "google/protobuf/duration.proto";
+
+package admin.proto;
+
+service AdminService {
+    rpc SetSettings(SetSettingsReq) returns (SetSettingsRsp);
+    rpc GetSettings(GetSettingsReq) returns (GetSettingsRsp);
+}
+
+message SetSettingsReq {
+    Settings settings = 1;
+}
+
+message SetSettingsRsp {
+    // empty
+}
+
+message GetSettingsReq {
+    // emtpy
+}
+
+message GetSettingsRsp {
+    Settings settings = 1;
+}
+
+message Settings {
+    map<string, ServiceSettings> services = 1;
+}
+
+message ServiceSettings {
+    string target = 1;
+    map<string, CheckerSettings> checkers = 2;
+    map<string, SploitSettings> sploits = 3;
+}
+
+message Rate {
+    uint64 times = 1;
+    google.protobuf.Duration per = 2;
+}
+
+message CheckerSettings {
+    CheckSettings check = 1;
+    GetSettings get = 2;
+}
+
+message CheckSettings {
+    Rate rate = 1;
+    uint64 success_points = 2;
+    uint64 fail_penalty = 3;
+}
+
+message GetSettings {
+    Rate rate = 1;
+    uint64 success_points = 2;
+    uint64 fail_penalty = 3;
+}
+
+message SploitSettings {
+    Rate rate = 1;
+}

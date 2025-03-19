@@ -2,13 +2,14 @@ package raterunner
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/ratelimit"
-	"github.com/HazyCorp/govnilo/taskrunner"
 	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/HazyCorp/govnilo/common/hzlog"
+	"github.com/HazyCorp/govnilo/pkg/ratelimit"
+	"github.com/HazyCorp/govnilo/taskrunner"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ type taskSpec struct {
 	avgCounter       *AvgCounter
 	targetRate       Rate
 	currentInstances uint64
-	rateLimitter     *ratelimit.RateLimitter
+	rateLimitter     *ratelimit.Limiter
 }
 
 func (t *taskSpec) neededInstances() uint64 {
@@ -178,6 +179,10 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if _, exists := r.tasks[taskName]; exists {
+		return errors.Errorf("cannot register task, task already registered")
+	}
+
 	spec := &taskSpec{
 		l:          r.l.With(slog.String("task_name", taskName)),
 		f:          f,
@@ -185,9 +190,8 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 		avgCounter: NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
 		targetRate: Rate{Times: 0, Per: time.Second},
 		rateLimitter: ratelimit.New(
-			r.l.With(slog.String("task_name", taskName)),
-			// zap.NewNop(),
-			ratelimit.RateLimitterSpec{Times: 0, Per: time.Second},
+			ratelimit.Spec{Times: 0, Per: time.Second},
+			ratelimit.WithLogger(r.l.With(slog.String("task_name", taskName))),
 		),
 	}
 
@@ -224,7 +228,7 @@ func (r *RateRunner) SetTaskRate(taskName string, rate Rate) error {
 		return err
 	}
 
-	err = t.rateLimitter.SetSpec(ratelimit.RateLimitterSpec{
+	err = t.rateLimitter.SetSpec(ratelimit.Spec{
 		Times: rate.Times,
 		Per:   rate.Per,
 	})
@@ -245,20 +249,13 @@ func (r *RateRunner) SetTaskRate(taskName string, rate Rate) error {
 func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 	return func(ctx context.Context) error {
 		// to distribute load more uniformly let's sleep random amount of time in the beginning (jitter)
+		// TODO: remove: ratelimitter should shape the load
 		toSleep := time.Duration(uint64(rand.Float64() * float64(t.targetRate.Per)))
 		if err := r.waitFor(ctx, toSleep); err != nil {
 			return err
 		}
 
 		for {
-			// check for the context done needed
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-				// pass
-			}
-
 			if err := t.rateLimitter.Acquire(ctx); err != nil {
 				return err
 			}
@@ -266,6 +263,8 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 			start := time.Now()
 			if err := t.f(ctx); err != nil {
 				r.l.Warn("task failed in rate runner, restarting", slog.String("task_name", t.name), hzlog.Error(err))
+				// we don't need to update avg on failed tasks
+				continue
 			}
 
 			duration := time.Since(start)

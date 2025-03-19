@@ -4,7 +4,7 @@
 // - protoc             v5.26.1
 // source: admin.proto
 
-package pb
+package proto
 
 import (
 	context "context"

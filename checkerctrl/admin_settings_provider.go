@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/HazyCorp/govnilo/common/checkersettings"
 	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
-	"github.com/HazyCorp/govnilo/pkg/adminklient"
+	"github.com/HazyCorp/govnilo/pkg/adminka/adminklient"
 	"log/slog"
 
 	"github.com/pkg/errors"

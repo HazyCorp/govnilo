@@ -2,6 +2,7 @@ package checkerctrl
 
 import (
 	"fmt"
+
 	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -17,6 +18,11 @@ type checkerMetrics struct {
 	SuccessGetPoints  *metrics.Counter
 	FailGetCounter    *metrics.Counter
 	FailGetPenalty    *metrics.Counter
+
+	CheckInternalErrorsTotal    *metrics.Counter
+	GetInternalErrorsTotal      *metrics.Counter
+	CheckInternalErrorsDuration *metrics.Histogram
+	GetInternalErrorsDuration   *metrics.Histogram
 
 	SuccessCheckDuration *metrics.Histogram
 	FailCheckDuration    *metrics.Histogram
@@ -110,6 +116,11 @@ func (c *Controller) checkerMetricsFor(checkerID hazycheck2.CheckerID) *checkerM
 		return fmt.Sprintf(template, name, status, method, checkerID.Service, checkerID.Name)
 	}
 
+	internalErrTemplate := `%s{method=%q, service=%q, checker=%q}`
+	genInternalErrMetricName := func(name, method string) string {
+		return fmt.Sprintf(internalErrTemplate, name, method, checkerID.Service, checkerID.Name)
+	}
+
 	m = &checkerMetrics{
 		SuccessCheckCounter: metrics.NewCounter(genMetricName("checker_runs_total", "success", "check")),
 		SuccessCheckPoints:  metrics.NewCounter(genMetricName("checker_points", "success", "check")),
@@ -120,6 +131,11 @@ func (c *Controller) checkerMetricsFor(checkerID hazycheck2.CheckerID) *checkerM
 		SuccessGetPoints:  metrics.NewCounter(genMetricName("checker_points", "success", "get")),
 		FailGetCounter:    metrics.NewCounter(genMetricName("checker_runs_total", "fail", "get")),
 		FailGetPenalty:    metrics.NewCounter(genMetricName("checker_points", "fail", "get")),
+
+		CheckInternalErrorsTotal:    metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "check")),
+		GetInternalErrorsTotal:      metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "get")),
+		CheckInternalErrorsDuration: metrics.NewHistogram(genInternalErrMetricName("checker_internal_errors_duration", "check")),
+		GetInternalErrorsDuration:   metrics.NewHistogram(genInternalErrMetricName("checker_internal_errors_duration", "get")),
 
 		SuccessCheckDuration: metrics.NewHistogram(genMetricName("checker_run_duration", "success", "check")),
 		FailCheckDuration:    metrics.NewHistogram(genMetricName("checker_run_duration", "fail", "check")),

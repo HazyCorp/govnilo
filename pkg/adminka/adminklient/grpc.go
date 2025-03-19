@@ -2,10 +2,11 @@ package adminklient
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/HazyCorp/govnilo/common/checkersettings"
 	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/common/pb"
-	"log/slog"
+	"github.com/HazyCorp/govnilo/proto"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -13,7 +14,7 @@ import (
 )
 
 type GRPCClient struct {
-	client pb.AdminServiceClient
+	client proto.AdminServiceClient
 	l      *slog.Logger
 }
 
@@ -37,12 +38,12 @@ func NewGRPC(c GRPCClientConfig, opts ...ClientOpt) (Client, error) {
 		return nil, errors.Wrapf(err, "cannot create grpc client with config %+v", c)
 	}
 
-	client := pb.NewAdminServiceClient(conn)
+	client := proto.NewAdminServiceClient(conn)
 	return &GRPCClient{client: client, l: o.Logger}, nil
 }
 
 func (c *GRPCClient) GetConfig(ctx context.Context) (*checkersettings.Settings, error) {
-	rsp, err := c.client.GetSettings(ctx, &pb.GetSettingsReq{})
+	rsp, err := c.client.GetSettings(ctx, &proto.GetSettingsReq{})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get settings from grpc client")
 	}

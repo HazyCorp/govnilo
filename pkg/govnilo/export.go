@@ -19,6 +19,6 @@ var (
 
 	RegisterChecker = hazycheck.RegisterChecker
 	RegisterSploit  = hazycheck.RegisterSploit
-)
 
-type InternalError error
+	InternalError = hazycheck.InternalError
+)

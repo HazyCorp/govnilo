@@ -3,15 +3,16 @@ package checkerctrl
 import (
 	"context"
 	"fmt"
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
-	"github.com/HazyCorp/govnilo/raterunner"
 	"log/slog"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/HazyCorp/govnilo/common/checkersettings"
+	"github.com/HazyCorp/govnilo/common/hzlog"
+	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/raterunner"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -26,8 +27,8 @@ type Config struct {
 
 type Controller struct {
 	l                  *slog.Logger
-	registeredCheckers map[hazycheck2.CheckerID]hazycheck2.Checker
-	registeredSploits  map[hazycheck2.SploitID]hazycheck2.Sploit
+	registeredCheckers map[hazycheck.CheckerID]hazycheck.Checker
+	registeredSploits  map[hazycheck.SploitID]hazycheck.Sploit
 	storage            ControllerStorage
 	settingsProvider   SettingsProvider
 	conf               Config
@@ -38,13 +39,13 @@ type Controller struct {
 	runErrChan chan error
 
 	checkerMetricsMu sync.RWMutex
-	checkerMetrics   map[hazycheck2.CheckerID]*checkerMetrics
+	checkerMetrics   map[hazycheck.CheckerID]*checkerMetrics
 
 	sploitMetricsMu sync.RWMutex
-	sploitMetrics   map[hazycheck2.SploitID]*sploitMetrics
+	sploitMetrics   map[hazycheck.SploitID]*sploitMetrics
 
 	providersMu     sync.RWMutex
-	cachedProviders map[string]hazycheck2.Connector
+	cachedProviders map[string]hazycheck.Connector
 
 	currentSettings atomic.Pointer[checkersettings.Settings]
 
@@ -55,8 +56,8 @@ type ControllerIn struct {
 	fx.In
 
 	Logger           *slog.Logger
-	Checkers         []hazycheck2.Checker `group:"checkers"`
-	Sploits          []hazycheck2.Sploit  `group:"sploits"`
+	Checkers         []hazycheck.Checker `group:"checkers"`
+	Sploits          []hazycheck.Sploit  `group:"sploits"`
 	Storage          ControllerStorage
 	SettingsProvider SettingsProvider
 	Config           Config
@@ -64,12 +65,12 @@ type ControllerIn struct {
 }
 
 func New(in ControllerIn) *Controller {
-	idToChecker := make(map[hazycheck2.CheckerID]hazycheck2.Checker, len(in.Checkers))
+	idToChecker := make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers))
 	for _, check := range in.Checkers {
 		idToChecker[check.CheckerID()] = check
 	}
 
-	idToSploit := make(map[hazycheck2.SploitID]hazycheck2.Sploit, len(in.Sploits))
+	idToSploit := make(map[hazycheck.SploitID]hazycheck.Sploit, len(in.Sploits))
 	for _, sploit := range in.Sploits {
 		idToSploit[sploit.SploitID()] = sploit
 	}
@@ -84,10 +85,10 @@ func New(in ControllerIn) *Controller {
 		runErrChan:         make(chan error, 1),
 		strategy:           in.Strategy,
 		settingsProvider:   in.SettingsProvider,
-		checkerMetrics:     make(map[hazycheck2.CheckerID]*checkerMetrics),
-		sploitMetrics:      make(map[hazycheck2.SploitID]*sploitMetrics),
+		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics),
+		sploitMetrics:      make(map[hazycheck.SploitID]*sploitMetrics),
 
-		cachedProviders: make(map[string]hazycheck2.Connector),
+		cachedProviders: make(map[string]hazycheck.Connector),
 	}
 }
 
@@ -155,10 +156,11 @@ func (c *Controller) run(ctx context.Context) error {
 }
 
 func (c *Controller) genSploitRunAttackTask(
-	sploit hazycheck2.Sploit,
+	sploit hazycheck.Sploit,
 ) raterunner.TaskFunc {
 	sploitID := sploit.SploitID()
 	m := c.sploitMetricsFor(sploitID)
+	l := c.l.With(slog.Any("sploit_id", sploitID))
 
 	return func(ctx context.Context) error {
 		currentSettings := c.currentSettings.Load()
@@ -167,25 +169,28 @@ func (c *Controller) genSploitRunAttackTask(
 			return errors.Errorf("cannot find service %s in current settings", sploitID.Service)
 		}
 
-		checkerSettings := serviceSettings.Checkers[sploitID.Name]
-		if checkerSettings == nil {
-			return errors.Errorf("cannot find sploit %s in %s service settings", sploitID.Name, sploitID.Service)
-		}
-
 		start := time.Now()
 
-		// TODO: optimize, build new target only on new config set
-		target := fmt.Sprintf("%s:%d", c.conf.TargetHost, serviceSettings.TargetPort)
-		err := sploit.RunAttack(ctx, target)
-		if err != nil {
-			m.FailCounter.Inc()
-			m.FailDuration.UpdateDuration(start)
+		var sploitErr error
+		// we use defer here to recover from panics
+		defer func() {
+			if r := recover(); r != nil {
+				sploitErr = errors.Errorf("sploit paniced: %+v", r)
+			}
 
-			return errors.Wrap(err, "sploit.RunAttack unexpectedly errored")
-		}
+			if sploitErr != nil {
+				m.FailCounter.Inc()
+				m.FailDuration.UpdateDuration(start)
 
-		m.SuccessCounter.Inc()
-		m.SuccessDuration.UpdateDuration(start)
+				l.DebugContext(ctx, "sploit.RunAttack failed", hzlog.Error(sploitErr))
+				return
+			}
+
+			m.SuccessCounter.Inc()
+			m.SuccessDuration.UpdateDuration(start)
+		}()
+
+		sploitErr = sploit.RunAttack(ctx, serviceSettings.Target)
 
 		// don't need to save anything after sploit running
 		return nil
@@ -193,7 +198,7 @@ func (c *Controller) genSploitRunAttackTask(
 }
 
 func (c *Controller) genCheckerCheckTask(
-	checker hazycheck2.Checker,
+	checker hazycheck.Checker,
 ) raterunner.TaskFunc {
 	checkerID := checker.CheckerID()
 	m := c.checkerMetricsFor(checkerID)
@@ -212,47 +217,63 @@ func (c *Controller) genCheckerCheckTask(
 		}
 
 		start := time.Now()
+		var data []byte
+		var checkErr error
+		// we use defer here to recover from panics
+		defer func() {
+			if r := recover(); r != nil {
+				checkErr = hazycheck.InternalError(errors.Errorf("checker check paniced with message: %+v", checkErr))
+			}
 
-		// TODO: optimize, build new target only on new config set
-		target := fmt.Sprintf("%s:%d", c.conf.TargetHost, serviceSettings.TargetPort)
-		data, err := checker.Check(ctx, target)
+			success := true
+			if checkErr != nil {
+				var internalErr *hazycheck.InternalErr
+				if errors.As(checkErr, &internalErr) {
+					// internal error occured, we cannot give penalties to teams
 
-		success := true
-		if err != nil {
-			l.Info(
-				"checker.Check of errored",
-				slog.Any("checker", checker.CheckerID()),
-				hzlog.Error(err),
-			)
+					l.WarnContext(ctx, "internal checker error occurred", hzlog.Error(internalErr.Internal))
 
-			// if checker.Check fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
-			success = false
-		}
+					m.CheckInternalErrorsTotal.Inc()
+					m.CheckInternalErrorsDuration.UpdateDuration(start)
 
-		if success {
-			l.Debug("checker run succeed", slog.Any("checker_id", checker.CheckerID()))
-			m.SuccessCheckCounter.Inc()
-			m.SuccessCheckDuration.UpdateDuration(start)
-			m.SuccessCheckPoints.Add(int(checkerSettings.Check.SuccessPoints))
-		} else {
-			m.FailCheckCounter.Inc()
-			m.FailCheckDuration.UpdateDuration(start)
-			m.FailCheckPenalty.Add(int(checkerSettings.Check.FailPenalty))
-		}
+					return
+				}
 
-		// but, errors of saving state are unexpected, need to mark task as failed
+				l.Debug(
+					"checker.Check errored",
+					hzlog.Error(checkErr),
+				)
 
-		l.Debug("saving the data", slog.String("data", string(data)))
-		if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
-			return errors.Wrap(err, "cannot save check data to storage")
-		}
+				// if checker.Check fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
+				success = false
+			}
+
+			if success {
+				l.Debug("checker run succeed", slog.Any("checker_id", checker.CheckerID()))
+				m.SuccessCheckCounter.Inc()
+				m.SuccessCheckDuration.UpdateDuration(start)
+				m.SuccessCheckPoints.Add(int(checkerSettings.Check.SuccessPoints))
+
+				l.Debug("saving the data", slog.String("data", string(data)))
+				if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
+					l.WarnContext(ctx, "cannot save check data to storage", hzlog.Error(err))
+					return
+				}
+			} else {
+				m.FailCheckCounter.Inc()
+				m.FailCheckDuration.UpdateDuration(start)
+				m.FailCheckPenalty.Add(int(checkerSettings.Check.FailPenalty))
+			}
+		}()
+
+		data, checkErr = checker.Check(ctx, serviceSettings.Target)
 
 		return nil
 	}
 }
 
 func (c *Controller) genCheckerGetTask(
-	checker hazycheck2.Checker,
+	checker hazycheck.Checker,
 ) raterunner.TaskFunc {
 	checkerID := checker.CheckerID()
 	m := c.checkerMetricsFor(checkerID)
@@ -279,30 +300,50 @@ func (c *Controller) genCheckerGetTask(
 			return errors.Errorf("data pool is empty, cannot get data to run Checker.Get")
 		}
 
+		start := time.Now()
+
+		var getErr error
+		// we use defer to catch panics
+		defer func() {
+			if r := recover(); r != nil {
+				// panic is an internal error
+				getErr = hazycheck.InternalError(errors.Errorf("checker.get paniced: %+v", r))
+			}
+
+			success := true
+			if getErr != nil {
+				var internalErr *hazycheck.InternalErr
+				if errors.As(getErr, &internalErr) {
+					// internal error occurred, we don't need to increment any points or penalties
+					l.WarnContext(ctx, "internal error occurred", hzlog.Error(internalErr.Internal))
+
+					m.GetInternalErrorsTotal.Inc()
+					m.GetInternalErrorsDuration.UpdateDuration(start)
+
+					return
+				}
+
+				// if checker.Get fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
+				success = false
+				l.Debug("checker.Get of failed with message", hzlog.Error(getErr))
+			}
+
+			if success {
+				l.Debug("checker.Get succeed")
+				m.SuccessGetCounter.Inc()
+				m.SuccessGetDuration.UpdateDuration(start)
+				m.SuccessGetPoints.Add(int(checkerSettings.Get.SuccessPoints))
+			} else {
+				m.FailGetCounter.Inc()
+				m.FailGetDuration.UpdateDuration(start)
+				m.FailGetPenalty.Add(int(checkerSettings.Get.FailPenalty))
+			}
+		}()
+
 		idx := rand.Intn(len(pool))
 		data := pool[idx]
 
-		start := time.Now()
-		success := true
-		// TODO: optimize, build new target only on new config set
-		target := fmt.Sprintf("%s:%d", c.conf.TargetHost, serviceSettings.TargetPort)
-		err = checker.Get(ctx, target, data)
-		if err != nil {
-			// if checker.Get fails -- it's OK, it's expected behaviour, so, we jkon't need to fail this task
-			success = false
-			l.Debug("checker.Get of failed with message", hzlog.Error(err))
-		}
-
-		if success {
-			l.Debug("checker.Get succeed")
-			m.SuccessGetCounter.Inc()
-			m.SuccessGetDuration.UpdateDuration(start)
-			m.SuccessGetPoints.Add(int(checkerSettings.Get.SuccessPoints))
-		} else {
-			m.FailGetCounter.Inc()
-			m.FailGetDuration.UpdateDuration(start)
-			m.FailGetPenalty.Add(int(checkerSettings.Get.FailPenalty))
-		}
+		getErr = checker.Get(ctx, serviceSettings.Target, data)
 
 		return nil
 	}
@@ -310,7 +351,7 @@ func (c *Controller) genCheckerGetTask(
 
 func (c *Controller) saveCheckerData(
 	ctx context.Context,
-	checkerID hazycheck2.CheckerID,
+	checkerID hazycheck.CheckerID,
 	data []byte,
 ) error {
 	pool, err := c.storage.GetCheckerDataPool(ctx, checkerID)
@@ -351,7 +392,11 @@ func (c *Controller) syncState(ctx context.Context) error {
 	var errlist *multierror.Error
 	for svcName, svc := range currentSettings.Services {
 		for checkerName, checkerState := range svc.Checkers {
-			checkerID := hazycheck2.CheckerID{
+			if checkerState == nil {
+				continue
+			}
+
+			checkerID := hazycheck.CheckerID{
 				Service: svcName,
 				Name:    checkerName,
 			}
@@ -390,7 +435,11 @@ func (c *Controller) syncState(ctx context.Context) error {
 		}
 
 		for sploitName, settings := range svc.Sploits {
-			sploitID := hazycheck2.SploitID{Service: svcName, Name: sploitName}
+			if settings == nil {
+				continue
+			}
+
+			sploitID := hazycheck.SploitID{Service: svcName, Name: sploitName}
 			sploit, exists := c.registeredSploits[sploitID]
 			if !exists {
 				errlist = multierror.Append(
@@ -438,8 +487,8 @@ func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate
 	return nil
 }
 
-func (c *Controller) providerForService(id string) hazycheck2.Connector {
-	p := func() hazycheck2.Connector {
+func (c *Controller) providerForService(id string) hazycheck.Connector {
+	p := func() hazycheck.Connector {
 		c.providersMu.RLock()
 		defer c.providersMu.RUnlock()
 
@@ -459,7 +508,7 @@ func (c *Controller) providerForService(id string) hazycheck2.Connector {
 		return p
 	}
 
-	p = hazycheck2.NewConnector(id)
+	p = hazycheck.NewConnector(id)
 	c.cachedProviders[id] = p
 	return p
 }
