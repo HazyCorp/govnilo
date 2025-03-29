@@ -76,7 +76,7 @@ func New(in ControllerIn) *Controller {
 	}
 
 	return &Controller{
-		l:                  in.Logger,
+		l:                  in.Logger.With(slog.String("component", "checker-controller")),
 		registeredCheckers: idToChecker,
 		registeredSploits:  idToSploit,
 		storage:            in.Storage,

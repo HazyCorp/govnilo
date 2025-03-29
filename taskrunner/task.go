@@ -66,7 +66,7 @@ type TaskRunner struct {
 
 func NewTaskRunner(l *slog.Logger) *TaskRunner {
 	return &TaskRunner{
-		l:           l,
+		l:           l.With(slog.String("component", "task-runner")),
 		baseContext: context.TODO(),
 
 		taskIDToState: make(map[string]*taskState),

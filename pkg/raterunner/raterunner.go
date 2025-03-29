@@ -81,7 +81,7 @@ type RateRunner struct {
 
 func New(l *slog.Logger) *RateRunner {
 	return &RateRunner{
-		l: l,
+		l: l.With(slog.String("component", "rate-runner")),
 
 		tr:    taskrunner.NewTaskRunner(l),
 		tasks: make(map[string]*taskSpec),
