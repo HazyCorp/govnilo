@@ -26,6 +26,8 @@ type Rate struct {
 	Per   time.Duration
 }
 
+var ZeroRate = Rate{Times: 0, Per: time.Second}
+
 type taskSpec struct {
 	l  *slog.Logger
 	mu sync.Mutex

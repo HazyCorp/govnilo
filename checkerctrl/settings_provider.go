@@ -2,10 +2,10 @@ package checkerctrl
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
 
+	"github.com/HazyCorp/govnilo/common/checkersettings"
 	"github.com/pkg/errors"
+
 	"go.uber.org/fx"
 )
 
@@ -15,29 +15,22 @@ type SettingsProvider interface {
 
 func validateSettings(
 	converted *checkersettings.Settings,
-	knownCheckers map[hazycheck2.CheckerID]hazycheck2.Checker,
-	knownSploits map[hazycheck2.SploitID]hazycheck2.Sploit,
 ) error {
-	for svcName, svcState := range converted.Services {
-		for checkerName := range svcState.Checkers {
-			checkerID := hazycheck2.CheckerID{
-				Service: svcName,
-				Name:    checkerName,
-			}
+	// TODO: add some validations
+	for svcName, svc := range converted.Services {
+		if svc == nil {
+			return errors.Errorf("service description cannot be nil, but service %s was", svcName)
+		}
 
-			if _, exists := knownCheckers[checkerID]; !exists {
-				return errors.Errorf("checker %+v not registered, config is invalid", checkerID)
+		for checkerName, checkerDesc := range svc.Checkers {
+			if checkerDesc == nil {
+				return errors.Errorf("checker description cannot be nil, but checker %s:%s was", svcName, checkerName)
 			}
 		}
 
-		for sploitName := range svcState.Sploits {
-			sploitID := hazycheck2.SploitID{
-				Service: svcName,
-				Name:    sploitName,
-			}
-
-			if _, exists := knownSploits[sploitID]; !exists {
-				return errors.Errorf("sploit %+v not registered, config is invalid", sploitID)
+		for sploitName, sploitDesc := range svc.Sploits {
+			if sploitDesc == nil {
+				return errors.Errorf("checker description cannot be nil, but checker %s:%s was", svcName, sploitName)
 			}
 		}
 	}

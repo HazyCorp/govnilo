@@ -61,7 +61,7 @@ func (p *FileSettingsProvider) GetSettings(ctx context.Context) (*checkersetting
 		return nil, errors.Wrap(err, "cannot parse the config as yaml")
 	}
 
-	if err := validateSettings(&s, p.checkers, p.sploits); err != nil {
+	if err := validateSettings(&s); err != nil {
 		return nil, errors.Wrap(err, "read the settings from file, but they were not valid")
 	}
 

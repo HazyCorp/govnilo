@@ -388,87 +388,121 @@ func (c *Controller) syncState(ctx context.Context) error {
 
 	c.currentSettings.Store(currentSettings)
 
-	// TODO: handle removal of missing service tasks
 	var errlist *multierror.Error
-	for svcName, svc := range currentSettings.Services {
-		for checkerName, checkerState := range svc.Checkers {
-			if checkerState == nil {
-				continue
-			}
 
-			checkerID := hazycheck.CheckerID{
-				Service: svcName,
-				Name:    checkerName,
-			}
+	for checkerID, checker := range c.registeredCheckers {
+		l := c.l.With("checker_id", checkerID)
 
-			checker, exists := c.registeredCheckers[checkerID]
+		svcName, checkerName := checkerID.Service, checkerID.Name
+
+		checkerExists := true
+		var svcDesc *checkersettings.ServiceSettings
+		var checkerDesc *checkersettings.CheckerSettings
+
+		// using func here to avoid nil reference panics
+		// return allows us to skip block of code, if some internal
+		// structs don't exist
+		func() {
+			var exists bool
+
+			svcDesc, exists = currentSettings.Services[svcName]
 			if !exists {
-				errlist = multierror.Append(
-					errlist,
-					errors.Errorf(
-						"checker %q from saved state doesn't exist",
-						svcName,
-					),
-				)
-				continue
+				checkerExists = false
+				l.DebugContext(ctx, "checker doesn't exist in current settings, setting rate to zero")
+				return
 			}
 
-			checkerTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "check")
-			checkerTask := c.genCheckerCheckTask(checker)
-			if err := c.setTaskRate(checkerTaskName, checkerTask, checkerState.Check.Rate); err != nil {
-				errlist = multierror.Append(
-					errlist,
-					errors.Wrapf(err, "cannot set rate on check %q", checker.CheckerID()),
-				)
-				continue
+			checkerDesc, exists = svcDesc.Checkers[checkerName]
+			if !exists {
+				checkerExists = false
+				l.DebugContext(ctx, "checker doesn't exist in current settings, setting rate to zero")
+				return
 			}
+		}()
 
-			getterTaskName := fmt.Sprintf("%s__%s__%s", svcName, checkerName, "get")
-			getterTask := c.genCheckerGetTask(checker)
-			if err := c.setTaskRate(getterTaskName, getterTask, checkerState.Get.Rate); err != nil {
-				errlist = multierror.Append(
-					errlist,
-					errors.Wrapf(err, "cannot set rate on get %q", checker.CheckerID()),
-				)
-				continue
+		checkRate := raterunner.ZeroRate
+		getRate := raterunner.ZeroRate
+		if checkerExists {
+			checkRate = raterunner.Rate{
+				Times: checkerDesc.Check.Rate.Times,
+				Per:   checkerDesc.Check.Rate.Per.AsDuration(),
+			}
+			getRate = raterunner.Rate{
+				Times: checkerDesc.Get.Rate.Times,
+				Per:   checkerDesc.Get.Rate.Per.AsDuration(),
 			}
 		}
 
-		for sploitName, settings := range svc.Sploits {
-			if settings == nil {
-				continue
-			}
+		checkerTaskName := fmt.Sprintf("%s__%s__check", svcName, checkerName)
+		checkerTask := c.genCheckerCheckTask(checker)
+		if err := c.setTaskRate(checkerTaskName, checkerTask, checkRate); err != nil {
+			errlist = multierror.Append(
+				errlist,
+				errors.Wrapf(err, "cannot set rate on check %q", checkerID),
+			)
+			continue
+		}
 
-			sploitID := hazycheck.SploitID{Service: svcName, Name: sploitName}
-			sploit, exists := c.registeredSploits[sploitID]
+		getterTaskName := fmt.Sprintf("%s__%s__get", svcName, checkerName)
+		getterTask := c.genCheckerGetTask(checker)
+		if err := c.setTaskRate(getterTaskName, getterTask, getRate); err != nil {
+			errlist = multierror.Append(
+				errlist,
+				errors.Wrapf(err, "cannot set rate on get %q", checkerID),
+			)
+			continue
+		}
+	}
+
+	for sploitID, sploit := range c.registeredSploits {
+		l := c.l.With(slog.Any("sploit_id", sploitID))
+
+		svcName, sploitName := sploitID.Service, sploitID.Name
+		existingSploit := true
+
+		var svcDesc *checkersettings.ServiceSettings
+		var sploitDesc *checkersettings.SploitSettings
+		func() {
+			var exists bool
+
+			svcDesc, exists = currentSettings.Services[svcName]
 			if !exists {
-				errlist = multierror.Append(
-					errlist,
-					errors.Errorf(
-						"sploit %s/%s not registered to checker, but it is present in the config",
-						svcName, sploitName,
-					),
-				)
-
-				continue
+				existingSploit = false
+				l.DebugContext(ctx, "sploit doesn't exist in current settings, setting rate to zero")
+				return
 			}
 
-			sploitTaskName := fmt.Sprintf("%s__%s__sploit", svcName, sploitName)
-			sploitTask := c.genSploitRunAttackTask(sploit)
-			if err := c.setTaskRate(sploitTaskName, sploitTask, settings.Rate); err != nil {
-				errlist = multierror.Append(
-					errlist,
-					errors.Wrap(err, "cannot set task rate for sploit"),
-				)
-				continue
+			sploitDesc, exists = svcDesc.Sploits[sploitName]
+			if !exists {
+				existingSploit = false
+				l.DebugContext(ctx, "sploit doesn't exist in current settings, setting rate to zero")
+				return
 			}
+		}()
+
+		sploitRate := raterunner.ZeroRate
+		if existingSploit {
+			sploitRate = raterunner.Rate{
+				Times: sploitDesc.Rate.Times,
+				Per:   sploitDesc.Rate.Per.AsDuration(),
+			}
+		}
+
+		sploitTaskName := fmt.Sprintf("%s__%s__sploit", svcName, sploitName)
+		sploitTask := c.genSploitRunAttackTask(sploit)
+		if err := c.setTaskRate(sploitTaskName, sploitTask, sploitRate); err != nil {
+			errlist = multierror.Append(
+				errlist,
+				errors.Wrap(err, "cannot set task rate for sploit"),
+			)
+			continue
 		}
 	}
 
 	return errlist.ErrorOrNil()
 }
 
-func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate checkersettings.Rate) error {
+func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate raterunner.Rate) error {
 	if !c.rr.TaskRegistered(taskName) {
 		if err := c.rr.RegisterTask(taskName, task); err != nil {
 			return errors.Wrapf(err, "cannot register task %q to rate runner", taskName)
@@ -476,10 +510,7 @@ func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate
 	}
 
 	// task is registered now
-	err := c.rr.SetTaskRate(taskName, raterunner.Rate{
-		Times: rate.Times,
-		Per:   time.Duration(rate.Per),
-	})
+	err := c.rr.SetTaskRate(taskName, rate)
 	if err != nil {
 		return errors.Wrapf(err, "cannot set task rate in rate runner for task %q", taskName)
 	}

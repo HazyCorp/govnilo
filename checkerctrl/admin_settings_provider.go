@@ -2,10 +2,11 @@ package checkerctrl
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/HazyCorp/govnilo/common/checkersettings"
 	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/adminka/adminklient"
-	"log/slog"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -63,7 +64,7 @@ func (p *AdminSettingsProvider) GetSettings(ctx context.Context) (*checkersettin
 		return nil, errors.Wrap(err, "cannot pull settings from admin service")
 	}
 
-	if err := validateSettings(settings, p.checkers, p.sploits); err != nil {
+	if err := validateSettings(settings); err != nil {
 		return nil, errors.Wrap(err, "successfully read the settings, but they are not valid")
 	}
 
