@@ -44,6 +44,7 @@ type Controller struct {
 	sploitMetricsMu sync.RWMutex
 	sploitMetrics   map[hazycheck.SploitID]*sploitMetrics
 
+	// BIG TODO!!!
 	providersMu     sync.RWMutex
 	cachedProviders map[string]hazycheck.Connector
 
@@ -252,7 +253,7 @@ func (c *Controller) genCheckerCheckTask(
 				l.Debug("checker run succeed", slog.Any("checker_id", checker.CheckerID()))
 				m.SuccessCheckCounter.Inc()
 				m.SuccessCheckDuration.UpdateDuration(start)
-				m.SuccessCheckPoints.Add(int(checkerSettings.Check.SuccessPoints))
+				m.SuccessCheckPoints.Add(checkerSettings.Check.SuccessPoints)
 
 				l.Debug("saving the data", slog.String("data", string(data)))
 				if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
@@ -262,7 +263,7 @@ func (c *Controller) genCheckerCheckTask(
 			} else {
 				m.FailCheckCounter.Inc()
 				m.FailCheckDuration.UpdateDuration(start)
-				m.FailCheckPenalty.Add(int(checkerSettings.Check.FailPenalty))
+				m.FailCheckPenalty.Add(checkerSettings.Check.FailPenalty)
 			}
 		}()
 
@@ -332,11 +333,11 @@ func (c *Controller) genCheckerGetTask(
 				l.Debug("checker.Get succeed")
 				m.SuccessGetCounter.Inc()
 				m.SuccessGetDuration.UpdateDuration(start)
-				m.SuccessGetPoints.Add(int(checkerSettings.Get.SuccessPoints))
+				m.SuccessGetPoints.Add(checkerSettings.Get.SuccessPoints)
 			} else {
 				m.FailGetCounter.Inc()
 				m.FailGetDuration.UpdateDuration(start)
-				m.FailGetPenalty.Add(int(checkerSettings.Get.FailPenalty))
+				m.FailGetPenalty.Add(checkerSettings.Get.FailPenalty)
 			}
 		}()
 
@@ -385,6 +386,9 @@ func (c *Controller) syncState(ctx context.Context) error {
 			"cannot receive routines state from storage",
 		)
 	}
+
+	// MUSTHAVE!!!!
+	currentSettings.NormalizePoints()
 
 	c.currentSettings.Store(currentSettings)
 
