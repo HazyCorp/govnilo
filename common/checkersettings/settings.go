@@ -11,7 +11,7 @@ import (
 // ...
 // services:
 //   example:
-//     target_port: 8080
+//     target: http://example.service.local:8080
 //     checkers:
 //       simple_user_flow:
 //         check:
@@ -105,15 +105,15 @@ type CheckerSettings struct {
 }
 
 type CheckerGetSettings struct {
-	SuccessPoints uint64 `json:"success_points" yaml:"success_points"`
-	FailPenalty   uint64 `json:"fail_penalty" yaml:"fail_penalty"`
-	Rate          Rate   `json:"rate" yaml:"rate"`
+	SuccessPoints float64 `json:"success_points" yaml:"success_points"`
+	FailPenalty   float64 `json:"fail_penalty" yaml:"fail_penalty"`
+	Rate          Rate    `json:"rate" yaml:"rate"`
 }
 
 type CheckerCheckSettings struct {
-	SuccessPoints uint64 `json:"success_points" yaml:"success_points"`
-	FailPenalty   uint64 `json:"fail_penalty" yaml:"fail_penalty"`
-	Rate          Rate   `json:"rate" yaml:"rate"`
+	SuccessPoints float64 `json:"success_points" yaml:"success_points"`
+	FailPenalty   float64 `json:"fail_penalty" yaml:"fail_penalty"`
+	Rate          Rate    `json:"rate" yaml:"rate"`
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,4 +163,56 @@ func (s *Settings) Clone() *Settings {
 	}
 
 	return &Settings{Services: services}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// TODO: use configs
+const TARGET_POINTS_PER_SECOND = 1000
+
+func (s *Settings) NormalizePoints() {
+	for _, svcSettings := range s.Services {
+		svcSettings.normalizePointsInService(TARGET_POINTS_PER_SECOND)
+	}
+}
+
+// normalizePointsInService normalizes points within one service (but all checkers).
+// if sum of success points is zero, does nothing to success points.
+// if sum of fail penalties is zero, does nothing to fail penalties.
+func (s *ServiceSettings) normalizePointsInService(targetSum float64) {
+	var pointsSum float64 = 0
+	var penaltySum float64 = 0
+
+	for _, checkerSettings := range s.Checkers {
+		checksPerSecond := float64(checkerSettings.Check.Rate.Times) / checkerSettings.Check.Rate.Per.AsDuration().Seconds()
+		pointsSum += checkerSettings.Check.SuccessPoints * checksPerSecond
+		penaltySum += checkerSettings.Check.FailPenalty * checksPerSecond
+
+		getsPerSecond := float64(checkerSettings.Get.Rate.Times) / checkerSettings.Get.Rate.Per.AsDuration().Seconds()
+		pointsSum += checkerSettings.Get.SuccessPoints * getsPerSecond
+		penaltySum += checkerSettings.Get.FailPenalty * getsPerSecond
+	}
+
+	// if sum is zero, than all the components are zero
+	// if all the components are zero, we may multiply them using any number
+	// (we are using zero btw)
+	// thats why coefficient is counted like that
+
+	var pointsCoefficient float64 = 0
+	if pointsSum != 0.0 {
+		pointsCoefficient = targetSum / pointsSum
+	}
+
+	var penaltyCoefficient float64 = 0
+	if penaltySum != 0.0 {
+		penaltyCoefficient = targetSum / penaltySum
+	}
+
+	for _, checkerSettings := range s.Checkers {
+		checkerSettings.Check.SuccessPoints *= pointsCoefficient
+		checkerSettings.Check.FailPenalty *= penaltyCoefficient
+
+		checkerSettings.Get.SuccessPoints *= pointsCoefficient
+		checkerSettings.Get.FailPenalty *= penaltyCoefficient
+	}
 }

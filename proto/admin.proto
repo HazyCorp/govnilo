@@ -49,14 +49,14 @@ message CheckerSettings {
 
 message CheckSettings {
     Rate rate = 1;
-    uint64 success_points = 2;
-    uint64 fail_penalty = 3;
+    double success_points = 2;
+    double fail_penalty = 3;
 }
 
 message GetSettings {
     Rate rate = 1;
-    uint64 success_points = 2;
-    uint64 fail_penalty = 3;
+    double success_points = 2;
+    double fail_penalty = 3;
 }
 
 message SploitSettings {

@@ -10,14 +10,14 @@ import (
 
 type checkerMetrics struct {
 	SuccessCheckCounter *metrics.Counter
-	SuccessCheckPoints  *metrics.Counter
+	SuccessCheckPoints  *metrics.FloatCounter
 	FailCheckCounter    *metrics.Counter
-	FailCheckPenalty    *metrics.Counter
+	FailCheckPenalty    *metrics.FloatCounter
 
 	SuccessGetCounter *metrics.Counter
-	SuccessGetPoints  *metrics.Counter
+	SuccessGetPoints  *metrics.FloatCounter
 	FailGetCounter    *metrics.Counter
-	FailGetPenalty    *metrics.Counter
+	FailGetPenalty    *metrics.FloatCounter
 
 	CheckInternalErrorsTotal    *metrics.Counter
 	GetInternalErrorsTotal      *metrics.Counter
@@ -123,14 +123,14 @@ func (c *Controller) checkerMetricsFor(checkerID hazycheck2.CheckerID) *checkerM
 
 	m = &checkerMetrics{
 		SuccessCheckCounter: metrics.NewCounter(genMetricName("checker_runs_total", "success", "check")),
-		SuccessCheckPoints:  metrics.NewCounter(genMetricName("checker_points", "success", "check")),
+		SuccessCheckPoints:  metrics.NewFloatCounter(genMetricName("checker_points", "success", "check")),
 		FailCheckCounter:    metrics.NewCounter(genMetricName("checker_runs_total", "fail", "check")),
-		FailCheckPenalty:    metrics.NewCounter(genMetricName("checker_points", "fail", "check")),
+		FailCheckPenalty:    metrics.NewFloatCounter(genMetricName("checker_points", "fail", "check")),
 
 		SuccessGetCounter: metrics.NewCounter(genMetricName("checker_runs_total", "success", "get")),
-		SuccessGetPoints:  metrics.NewCounter(genMetricName("checker_points", "success", "get")),
+		SuccessGetPoints:  metrics.NewFloatCounter(genMetricName("checker_points", "success", "get")),
 		FailGetCounter:    metrics.NewCounter(genMetricName("checker_runs_total", "fail", "get")),
-		FailGetPenalty:    metrics.NewCounter(genMetricName("checker_points", "fail", "get")),
+		FailGetPenalty:    metrics.NewFloatCounter(genMetricName("checker_points", "fail", "get")),
 
 		CheckInternalErrorsTotal:    metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "check")),
 		GetInternalErrorsTotal:      metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "get")),
