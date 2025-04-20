@@ -6,6 +6,7 @@ import (
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/metricsrv"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -66,6 +67,25 @@ func Read() (Config, error) {
 
 	if err := Validate(&c); err != nil {
 		return Config{}, errors.Wrap(err, "invalid config provided")
+	}
+
+	srvPort := os.Getenv("CHECKER_SERVE_PORT")
+	if srvPort != "" {
+		port, err := strconv.Atoi(srvPort)
+		if err != nil {
+			return Config{}, errors.Wrapf(err, "invalid port value in CHECKER_SERVE_PORT: %s", srvPort)
+		}
+		c.Serve.Port = uint(port)
+	}
+
+	metricsPort := os.Getenv("CHECKER_METRICS_PORT")
+
+	if metricsPort != "" {
+		port, err := strconv.Atoi(metricsPort)
+		if err != nil {
+			return Config{}, errors.Wrapf(err, "invalid port value in CHECKER_METRICS_PORT: %s", metricsPort)
+		}
+		c.Metrics.Port = uint64(port)
 	}
 
 	return c, nil
