@@ -50,6 +50,9 @@ type Controller struct {
 
 	currentSettings atomic.Pointer[checkersettings.Settings]
 
+	lastDeletionMu sync.RWMutex
+	lastDeletion   map[hazycheck.CheckerID]time.Time
+
 	rr *raterunner.RateRunner
 }
 
@@ -344,7 +347,7 @@ func (c *Controller) genCheckerGetTask(
 		idx := rand.Intn(len(pool))
 		data := pool[idx]
 
-		getErr = checker.Get(ctx, serviceSettings.Target, data)
+		getErr = checker.Get(ctx, serviceSettings.Target, data.Data)
 
 		return nil
 	}
@@ -366,11 +369,20 @@ func (c *Controller) saveCheckerData(
 		}
 	}
 
-	toDelete := c.strategy.NeedDelete(uint64(len(pool)))
-	for _, idx := range toDelete {
-		if _, err := c.storage.RemoveDataFromPool(ctx, checkerID, idx); err != nil {
-			return errors.Wrap(err, "cannot delete stale data from pool")
-		}
+	// deletion is a heavy operation, we have to run it not to frequent
+	c.lastDeletionMu.RLock()
+	lastTime, exists := c.lastDeletion[checkerID]
+	c.lastDeletionMu.RUnlock()
+
+	// TODO: use config
+	if !exists || time.Since(lastTime) > time.Second*10 {
+		// need to delete
+		c.storage.RemoveDataFromPool(ctx, checkerID, c.strategy.NeedDelete)
+
+		// save infomration
+		c.lastDeletionMu.Lock()
+		c.lastDeletion[checkerID] = time.Now()
+		c.lastDeletionMu.Unlock()
 	}
 
 	return nil

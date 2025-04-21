@@ -2,16 +2,18 @@ package fxbuild
 
 import (
 	"fmt"
-	checkerctrl2 "github.com/HazyCorp/govnilo/checkerctrl"
+	"log/slog"
+	"net"
+	"os"
+	"time"
+
+	"github.com/HazyCorp/govnilo/checkerctrl"
 	"github.com/HazyCorp/govnilo/common/hzlog"
-	configuration2 "github.com/HazyCorp/govnilo/configuration"
+	"github.com/HazyCorp/govnilo/configuration"
 	"github.com/HazyCorp/govnilo/fxutil"
 	"github.com/HazyCorp/govnilo/grpcutil"
 	"github.com/HazyCorp/govnilo/metricsrv"
 	"github.com/HazyCorp/govnilo/registrar"
-	"log/slog"
-	"net"
-	"os"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -19,7 +21,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func NewGRPCServer(l *slog.Logger, c configuration2.Serve, lc fx.Lifecycle) *grpc.Server {
+func NewGRPCServer(l *slog.Logger, c configuration.Serve, lc fx.Lifecycle) *grpc.Server {
 	listen := fmt.Sprintf("0.0.0.0:%d", c.Port)
 
 	lis, err := net.Listen("tcp", listen)
@@ -77,12 +79,12 @@ func NewLogger(lc fx.Lifecycle) *zap.Logger {
 	return l
 }
 
-func NewSaveStrategy() (checkerctrl2.SaveStrategy, error) {
-	return checkerctrl2.NewDummySaveStratedgy(512, 0.01)
+func NewSaveStrategy() (checkerctrl.SaveStrategy, error) {
+	return checkerctrl.NewDummySaveStratedgy(2048, 0.1, time.Hour)
 }
 
 func GetConstructors() []interface{} {
-	config, err := configuration2.Read()
+	config, err := configuration.Read()
 	if err != nil {
 		slog.Error("cannot read config", hzlog.Error(err))
 		os.Exit(1)
@@ -101,19 +103,19 @@ func GetConstructors() []interface{} {
 		// fxutil.AsIface[hazycheck.Provider](hazycheck.NewDummyProvider),
 		// checkerserver.NewFX,
 		func() *slog.Logger { return logger },
-		func() configuration2.Config { return config },
+		func() configuration.Config { return config },
 		NewLogger,
 		NewGRPCServer,
 		NewSaveStrategy,
-		checkerctrl2.NewFX,
+		checkerctrl.NewFX,
 		metricsrv.NewFX,
-		fxutil.AsIface[checkerctrl2.ControllerStorage](checkerctrl2.NewAsyncFileStoreFX),
+		fxutil.AsIface[checkerctrl.ControllerStorage](checkerctrl.NewAsyncFileStoreFX),
 	)
 
 	if config.SettingsProvider.FromFile != nil {
-		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl2.SettingsProvider](checkerctrl2.NewFileSettingsProvider))
+		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl.SettingsProvider](checkerctrl.NewFileSettingsProvider))
 	} else {
-		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl2.SettingsProvider](checkerctrl2.NewAdminSettingsProvider))
+		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl.SettingsProvider](checkerctrl.NewAdminSettingsProvider))
 	}
 
 	return knownConstructors
