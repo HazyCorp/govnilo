@@ -2,12 +2,14 @@ package checkerctrl
 
 import (
 	"context"
+	"log/slog"
+	"slices"
+	"sync"
+	"time"
+
 	"github.com/HazyCorp/govnilo/common/checkersettings"
 	"github.com/HazyCorp/govnilo/common/statestore"
 	"github.com/HazyCorp/govnilo/hazycheck"
-	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -74,7 +76,7 @@ func (s *serviceState) Clone() *serviceState {
 
 type checkerState struct {
 	SLA             CheckerPointsStats
-	CheckerDataPool [][]byte
+	CheckerDataPool []DataRecord
 }
 
 func (s *checkerState) Clone() *checkerState {
@@ -83,12 +85,13 @@ func (s *checkerState) Clone() *checkerState {
 	}
 
 	st := &checkerState{SLA: s.SLA}
-	st.CheckerDataPool = make([][]byte, 0, len(s.CheckerDataPool))
+	st.CheckerDataPool = make([]DataRecord, 0, len(s.CheckerDataPool))
 
-	for _, slice := range s.CheckerDataPool {
-		copied := make([]byte, len(slice))
-		copy(copied, slice)
-		st.CheckerDataPool = append(st.CheckerDataPool, copied)
+	for _, rec := range s.CheckerDataPool {
+		copiedData := make([]byte, len(rec.Data))
+		copy(copiedData, rec.Data)
+		copiedRecord := DataRecord{Data: copiedData, Created: rec.Created}
+		st.CheckerDataPool = append(st.CheckerDataPool, copiedRecord)
 	}
 
 	return st
@@ -154,7 +157,8 @@ func (s *AsyncFileStore) AppendCheckerData(
 ) error {
 	err := s.store.UpdateState(ctx, func(state *internalState) error {
 		checkerState := s.getOrCreateCheckerState(state, checkerID)
-		checkerState.CheckerDataPool = append(checkerState.CheckerDataPool, data)
+		record := DataRecord{Data: data, Created: time.Now()}
+		checkerState.CheckerDataPool = append(checkerState.CheckerDataPool, record)
 
 		return nil
 	})
@@ -168,7 +172,7 @@ func (s *AsyncFileStore) AppendCheckerData(
 func (s *AsyncFileStore) GetCheckerDataPool(
 	ctx context.Context,
 	checkerID hazycheck.CheckerID,
-) ([][]byte, error) {
+) ([]DataRecord, error) {
 	state, err := s.store.RetrieveState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve state from internal store")
@@ -183,28 +187,22 @@ func (s *AsyncFileStore) GetCheckerDataPool(
 func (s *AsyncFileStore) RemoveDataFromPool(
 	ctx context.Context,
 	checkerID hazycheck.CheckerID,
-	idx uint64,
-) ([]byte, error) {
-	var ret []byte
+	f NeedDeleteFunc,
+) error {
 	err := s.store.UpdateState(ctx, func(state *internalState) error {
 		checkerState := s.getOrCreateCheckerState(state, checkerID)
 
 		dataPool := checkerState.CheckerDataPool
-		if idx >= uint64(len(dataPool)) {
-			return errors.New("index out of bounds")
-		}
+		dataPool = slices.DeleteFunc(dataPool, func(rec DataRecord) bool { return f(&rec) })
 
-		// don't make copy, user is not allowed to change data from outside
-		ret = dataPool[idx]
-
-		checkerState.CheckerDataPool = append(dataPool[:idx], dataPool[idx+1:]...)
+		checkerState.CheckerDataPool = dataPool
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot update the state in internal storage")
+		return errors.Wrap(err, "cannot update the state in internal storage")
 	}
 
-	return ret, nil
+	return nil
 }
 
 func (s *AsyncFileStore) Flush(ctx context.Context) error {

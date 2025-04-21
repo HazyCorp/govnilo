@@ -2,6 +2,8 @@ package checkerctrl
 
 import (
 	"context"
+	"time"
+
 	"github.com/HazyCorp/govnilo/hazycheck"
 )
 
@@ -16,14 +18,21 @@ type CheckerPointsStats struct {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+type DataRecord struct {
+	Data    []byte
+	Created time.Time
+}
+
+type NeedDeleteFunc func(record *DataRecord) bool
+
 type ControllerStorage interface {
 	AppendCheckerData(ctx context.Context, checkerID hazycheck.CheckerID, data []byte) error
-	GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([][]byte, error)
+	GetCheckerDataPool(ctx context.Context, checkerID hazycheck.CheckerID) ([]DataRecord, error)
 	RemoveDataFromPool(
 		ctx context.Context,
 		checkerID hazycheck.CheckerID,
-		idx uint64,
-	) ([]byte, error)
+		needDelete NeedDeleteFunc,
+	) error
 
 	Flush(ctx context.Context) error
 }
