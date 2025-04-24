@@ -93,22 +93,26 @@ func (l *Limiter) Acquire(ctx context.Context) error {
 	newCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	go func() {
-		<-newCtx.Done()
-
-		l.mu.Lock()
-		ctxDone = true
-		l.mu.Unlock()
-
-		l.nonNilRL.Broadcast()
-	}()
-
 	l.mu.Lock()
+	if l.rl == nil {
+		// start goroutine if and only if RL is nil now
+		go func() {
+			<-newCtx.Done()
+
+			l.mu.Lock()
+			ctxDone = true
+			l.mu.Unlock()
+
+			l.nonNilRL.Broadcast()
+		}()
+	}
+
 	for l.rl == nil && !ctxDone {
 		l.nonNilRL.Wait()
 	}
 
-	// we awaited for non nil rl, lets save it (or rl is nil, but context done)
+	// we awaited for non nil rl, lets save it
+	// (or rl is nil, but context done)
 	rl := l.rl
 	l.mu.Unlock()
 

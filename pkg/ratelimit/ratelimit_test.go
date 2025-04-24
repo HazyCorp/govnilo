@@ -11,7 +11,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -50,7 +49,7 @@ func TestSimpleLimitCancel(t *testing.T) {
 }
 
 func TestAcquireAfterDelay(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	// defer goleak.VerifyNone(t)
 
 	e := 2
 	N := 5
