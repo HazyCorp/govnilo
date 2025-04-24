@@ -2,13 +2,12 @@ package ratelimit
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/HazyCorp/govnilo/common/hzlog"
-	"golang.org/x/time/rate"
+	"go.uber.org/ratelimit"
 )
 
 type Spec struct {
@@ -16,22 +15,17 @@ type Spec struct {
 	Per   time.Duration
 }
 
-var ErrStopped = errors.New("limiter stopped")
-
-// need only to distinguish between parent error and child error
-var internalStopError = errors.New("internal stop")
-
 // Limiter is precise rate limiter with context support.
 // Limiter guarantees, that on every window of defined size, there will be no more than
 // requested amount of times.
 type Limiter struct {
-	l            *slog.Logger
-	limiter      *rate.Limiter
-	spec         Spec
-	specRevision int
+	l    *slog.Logger
+	spec Spec
 
-	mu   sync.Mutex
-	cond *sync.Cond
+	rl ratelimit.Limiter
+
+	mu       sync.Mutex
+	nonNilRL *sync.Cond
 }
 
 // NewLimiter returns limiter that throttles rate of successful Acquire() calls
@@ -47,142 +41,99 @@ func New(spec Spec, opts ...RatelimitOption) *Limiter {
 		l = hzlog.NopLogger()
 	}
 
-	seconds := spec.Per.Seconds()
-
-	var limit rate.Limit
-	var burst = 1
-	if spec.Times == 0 {
-		limit = rate.Limit(0)
-		burst = 0
-	} else if seconds == 0 {
-		limit = rate.Inf
-	} else {
-		limit = rate.Limit(float64(spec.Times) / seconds)
-	}
-	limiter := rate.NewLimiter(limit, burst)
-
-	lim := &Limiter{
-		l:            l,
-		limiter:      limiter,
-		spec:         spec,
-		specRevision: 0,
+	lim := Limiter{
+		l:    l,
+		spec: spec,
 	}
 	cond := sync.NewCond(&lim.mu)
-	lim.cond = cond
+	lim.nonNilRL = cond
 
-	return lim
+	rl := lim.buildRL(spec)
+	lim.rl = rl
+
+	return &lim
+}
+
+func (l *Limiter) buildRL(spec Spec) ratelimit.Limiter {
+	var rl ratelimit.Limiter
+	if spec.Per == 0 {
+		rl = ratelimit.NewUnlimited()
+	} else if spec.Times != 0 {
+		rl = ratelimit.New(int(spec.Times), ratelimit.Per(spec.Per))
+	} else {
+		rl = nil
+	}
+
+	return rl
 }
 
 func (l *Limiter) SetSpec(spec Spec) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if spec == l.spec {
-		// don't need to change the spec
+	if l.spec == spec {
+		// nothing changed, dont need to notify anyone
 		return nil
 	}
 
-	seconds := spec.Per.Seconds()
-
-	var limit rate.Limit
-	var burst = 1
-	if spec.Times == 0 {
-		limit = rate.Limit(0)
-		burst = 0
-	} else if seconds == 0 {
-		limit = rate.Inf
-	} else {
-		limit = rate.Limit(float64(spec.Times) / seconds)
+	newRL := l.buildRL(spec)
+	l.rl = newRL
+	if newRL != nil {
+		l.nonNilRL.Broadcast()
 	}
-
-	l.limiter.SetLimit(limit)
-	l.limiter.SetBurst(burst)
-	l.spec = spec
-	l.specRevision++
-
-	// spec changed
-	l.cond.Broadcast()
 
 	return nil
 }
 
 func (l *Limiter) Acquire(ctx context.Context) error {
-	// TODO: optimize/rewrite ourselves
-	for {
-		newCtx, cancel := context.WithCancelCause(ctx)
-		waitEnded := false
+	// TODO: REWRITE THIS SHIT BLYAT!!!!
+	// KAKIE NAHUI 2 GORUTINI NA OZHIDANIE?
+	// DO EVERYTHING OURSELVES
+	ctxDone := false
+	newCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-		go func() {
-			<-newCtx.Done()
-
-			l.mu.Lock()
-			waitEnded = true
-			l.mu.Unlock()
-
-			l.cond.Broadcast()
-		}()
+	go func() {
+		<-newCtx.Done()
 
 		l.mu.Lock()
-		for l.limiter.Limit() == 0 && !waitEnded {
-			l.cond.Wait()
-		}
-
-		// nonzero limit awaited, or context canceled
-
-		if waitEnded {
-			cancel(nil)
-			l.mu.Unlock()
-			return newCtx.Err()
-		}
+		ctxDone = true
 		l.mu.Unlock()
 
-		go func() {
-			l.mu.Lock()
-			defer l.mu.Unlock()
+		l.nonNilRL.Broadcast()
+	}()
 
-			revision := l.specRevision
-			for revision == l.specRevision && !waitEnded {
-				l.cond.Wait()
-			}
+	l.mu.Lock()
+	for l.rl == nil && !ctxDone {
+		l.nonNilRL.Wait()
+	}
 
-			if waitEnded {
-				return
-			}
+	// we awaited for non nil rl, lets save it (or rl is nil, but context done)
+	rl := l.rl
+	l.mu.Unlock()
 
-			// spec changed, need to notify waiter
-			cancel(internalStopError)
-		}()
+	if ctxDone {
+		return ctx.Err()
+	}
 
-		err := l.limiter.Wait(newCtx)
-		if err == nil {
-			l.mu.Lock()
-			// to avoid goroutine leak
-			waitEnded = true
-			l.mu.Unlock()
+	// avoid goroutines leak, stop awaiter
+	cancel()
 
-			// finally, awaited
-			return nil
-		}
+	// rl is non nil, we can wait
+	awaited := make(chan struct{})
+	go func() {
+		// await can be long, but it will be FINITE
+		// we cannot kill goroutine, so, it's the best attempt we may do,
+		// because uber RL doesn't provide API with context
+		rl.Take()
+		close(awaited)
+	}()
 
-		if newCtx.Err() == nil {
-			l.l.DebugContext(ctx, "error from limiter, need to retry")
-			continue
-		}
-
-		// newCtx.Err() is not nil, lets investigate it's cause
-		err = context.Cause(newCtx)
-		if errors.Is(err, internalStopError) {
-			// it is a signal, that we should restart our waiting due to spec changed
-			continue
-		}
-
-		l.mu.Lock()
-		// to avoid goroutine leak
-		waitEnded = true
-		l.mu.Unlock()
-
-		// context cancelled or deadline exceeded, returning an error to caller
-		return newCtx.Err()
+	select {
+	case <-awaited:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
