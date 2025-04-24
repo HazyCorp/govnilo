@@ -93,6 +93,7 @@ func New(in ControllerIn) *Controller {
 		sploitMetrics:      make(map[hazycheck.SploitID]*sploitMetrics),
 
 		cachedProviders: make(map[string]hazycheck.Connector),
+		lastDeletion:    make(map[hazycheck.CheckerID]time.Time),
 	}
 }
 
