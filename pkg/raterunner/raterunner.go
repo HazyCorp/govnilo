@@ -65,7 +65,8 @@ func (t *taskSpec) neededInstances() uint64 {
 		float64(t.targetRate.Times) * float64(avgDuration) / float64(t.targetRate.Per),
 	)
 	// rate limitter will stop extra calls
-	instances += 1
+	toAdd := uint64(float64(instances) * 0.2)
+	instances += max(toAdd, 1)
 
 	return instances
 }
