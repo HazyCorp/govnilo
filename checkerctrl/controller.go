@@ -13,6 +13,7 @@ import (
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/raterunner"
+	"github.com/HazyCorp/govnilo/taskrunner"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -224,10 +225,16 @@ func (c *Controller) genCheckerCheckTask(
 		start := time.Now()
 		var data []byte
 		var checkErr error
+		cancelled := false
 		// we use defer here to recover from panics
 		defer func() {
 			if r := recover(); r != nil {
 				checkErr = hazycheck.InternalError(errors.Errorf("checker check paniced with message: %+v", checkErr))
+			}
+
+			if cancelled {
+				// don't change anything
+				return
 			}
 
 			success := true
@@ -272,6 +279,13 @@ func (c *Controller) genCheckerCheckTask(
 		}()
 
 		data, checkErr = checker.Check(ctx, serviceSettings.Target)
+		if checkErr != nil && errors.Is(checkErr, context.Canceled) {
+			cause := context.Cause(ctx)
+			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
+				l.Debug("checker.Check cancelled by task runner")
+				cancelled = true
+			}
+		}
 
 		return nil
 	}
@@ -308,11 +322,17 @@ func (c *Controller) genCheckerGetTask(
 		start := time.Now()
 
 		var getErr error
+		cancelled := false
 		// we use defer to catch panics
 		defer func() {
 			if r := recover(); r != nil {
 				// panic is an internal error
 				getErr = hazycheck.InternalError(errors.Errorf("checker.get paniced: %+v", r))
+			}
+
+			if cancelled {
+				// dont change anything
+				return
 			}
 
 			success := true
@@ -349,7 +369,14 @@ func (c *Controller) genCheckerGetTask(
 		data := pool[idx]
 
 		getErr = checker.Get(ctx, serviceSettings.Target, data.Data)
-
+		if getErr != nil && errors.Is(getErr, context.Canceled) {
+			cause := context.Cause(ctx)
+			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
+				// mark error as internal
+				l.Debug("checker.Get cancelled by task runner")
+				cancelled = true
+			}
+		}
 		return nil
 	}
 }

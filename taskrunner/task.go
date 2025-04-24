@@ -20,16 +20,18 @@ type Task interface {
 
 type taskInstance struct {
 	ctx     context.Context
-	cancel  context.CancelFunc
+	cancel  context.CancelCauseFunc
 	stopped atomic.Bool
 	errChan chan error
 }
+
+var ErrTaskCancelled = errors.Errorf("task cancelled")
 
 func (t *taskInstance) stop(ctx context.Context) error {
 	slog.Info("stopping task instance")
 
 	t.stopped.Store(true)
-	t.cancel()
+	t.cancel(ErrTaskCancelled)
 
 	// if err is ready, but context is already cancelled, return error from run
 	select {
@@ -189,7 +191,7 @@ func (r *TaskRunner) UpdateTaskInstances(taskName string, instances int) error {
 
 		l.Info("adding additional tasks", slog.Int("to_add", toAdd))
 		for i := 0; i < toAdd; i++ {
-			ctx, cancel := context.WithCancel(r.baseContext)
+			ctx, cancel := context.WithCancelCause(r.baseContext)
 
 			instance := &taskInstance{
 				ctx:     ctx,
