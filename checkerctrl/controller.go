@@ -279,7 +279,7 @@ func (c *Controller) genCheckerCheckTask(
 		}()
 
 		data, checkErr = checker.Check(ctx, serviceSettings.Target)
-		if checkErr != nil && errors.Is(checkErr, context.Canceled) {
+		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
 			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
 				l.Debug("checker.Check cancelled by task runner")
@@ -369,7 +369,7 @@ func (c *Controller) genCheckerGetTask(
 		data := pool[idx]
 
 		getErr = checker.Get(ctx, serviceSettings.Target, data.Data)
-		if getErr != nil && errors.Is(getErr, context.Canceled) {
+		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
 			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
 				// mark error as internal
