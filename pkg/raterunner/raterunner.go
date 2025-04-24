@@ -66,7 +66,7 @@ func (t *taskSpec) neededInstances() uint64 {
 	)
 
 	// rate limitter will stop extra calls
-	instances *= 2
+	instances = (instances + 1) * 2
 
 	return instances
 }
