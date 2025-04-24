@@ -1,12 +1,12 @@
 package get
 
 import (
-	"context"
 	"fmt"
+	"time"
+
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/cmdutil"
 	"github.com/HazyCorp/govnilo/hazycheck"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -22,6 +22,8 @@ var GetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "runs specified Checker.Get on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot build registered checkers")
@@ -44,7 +46,7 @@ var GetCmd = &cobra.Command{
 		}
 
 		start := time.Now()
-		err = checker.Get(context.Background(), target, []byte(data))
+		err = checker.Get(ctx, target, []byte(data))
 		if err != nil {
 			return err
 		}

@@ -2,12 +2,13 @@ package run
 
 import (
 	"context"
+	"log/slog"
+	"runtime"
+
 	"github.com/HazyCorp/govnilo/checkerctrl"
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/fxbuild"
 	"github.com/HazyCorp/govnilo/metricsrv"
-	"log/slog"
-	"runtime"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
