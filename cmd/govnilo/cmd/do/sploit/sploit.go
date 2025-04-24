@@ -1,7 +1,6 @@
 package sploit
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -20,6 +19,8 @@ var SploitCmd = &cobra.Command{
 	Use:   "sploit",
 	Short: "runs specified Sploit.RunAttack on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		checkers, err := cmdutil.ExtractSploits(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot build registered sploits")
@@ -42,7 +43,7 @@ var SploitCmd = &cobra.Command{
 		}
 
 		start := time.Now()
-		err = sploit.RunAttack(context.Background(), target)
+		err = sploit.RunAttack(ctx, target)
 		if err != nil {
 			return err
 		}

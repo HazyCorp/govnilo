@@ -1,12 +1,12 @@
 package check
 
 import (
-	"context"
 	"fmt"
+	"time"
+
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/cmdutil"
 	"github.com/HazyCorp/govnilo/hazycheck"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -19,6 +19,8 @@ var CheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "runs specified Checker.Check on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot extract checkers from command context")
@@ -40,7 +42,7 @@ var CheckCmd = &cobra.Command{
 		}
 
 		start := time.Now()
-		data, err := checker.Check(context.Background(), target)
+		data, err := checker.Check(ctx, target)
 		if err != nil {
 			return err
 		}
