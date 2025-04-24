@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/HazyCorp/govnilo/common/hzlog"
-	"go.uber.org/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 type Spec struct {
@@ -22,7 +22,7 @@ type Limiter struct {
 	l    *slog.Logger
 	spec Spec
 
-	rl ratelimit.Limiter
+	rl *rate.Limiter
 
 	mu       sync.Mutex
 	nonNilRL *sync.Cond
@@ -54,12 +54,13 @@ func New(spec Spec, opts ...RatelimitOption) *Limiter {
 	return &lim
 }
 
-func (l *Limiter) buildRL(spec Spec) ratelimit.Limiter {
-	var rl ratelimit.Limiter
+func (l *Limiter) buildRL(spec Spec) *rate.Limiter {
+	var rl *rate.Limiter
 	if spec.Per == 0 {
-		rl = ratelimit.NewUnlimited()
+		rl = rate.NewLimiter(rate.Inf, 1)
 	} else if spec.Times != 0 {
-		rl = ratelimit.New(int(spec.Times), ratelimit.Per(spec.Per), ratelimit.WithoutSlack)
+		r := rate.Limit(float64(spec.Times) / spec.Per.Seconds())
+		rl = rate.NewLimiter(r, 1)
 	} else {
 		rl = nil
 	}
@@ -75,6 +76,7 @@ func (l *Limiter) SetSpec(spec Spec) error {
 		// nothing changed, dont need to notify anyone
 		return nil
 	}
+	l.spec = spec
 
 	newRL := l.buildRL(spec)
 	l.rl = newRL
@@ -124,23 +126,18 @@ func (l *Limiter) Acquire(ctx context.Context) error {
 	cancel()
 
 	// rl is non nil, we can wait
-	awaited := make(chan struct{})
-	go func() {
-		// await can be long, but it will be FINITE
-		// we cannot kill goroutine, so, it's the best attempt we may do,
-		// because uber RL doesn't provide API with context
-		rl.Take()
-		close(awaited)
-	}()
-
-	select {
-	case <-awaited:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	withoutDeadline := ctxWithoutDeadline{Context: ctx}
+	return rl.Wait(&withoutDeadline)
 }
 
 func (l *Limiter) Stop(ctx context.Context) error {
 	return nil
+}
+
+type ctxWithoutDeadline struct {
+	context.Context
+}
+
+func (c *ctxWithoutDeadline) Deadline() (time.Time, bool) {
+	return time.Time{}, false
 }

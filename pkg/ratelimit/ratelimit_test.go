@@ -11,6 +11,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -19,7 +20,7 @@ func new(times uint64, per time.Duration) *Limiter {
 }
 
 func TestBlockedRateLimit(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	limit := new(1, time.Minute)
 	defer limit.Stop(context.Background())
@@ -34,7 +35,7 @@ func TestBlockedRateLimit(t *testing.T) {
 }
 
 func TestSimpleLimitCancel(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	limit := new(1, time.Minute)
 	defer limit.Stop(context.Background())
@@ -49,7 +50,7 @@ func TestSimpleLimitCancel(t *testing.T) {
 }
 
 func TestAcquireAfterDelay(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	e := 2
 	N := 5
@@ -84,7 +85,7 @@ func TestAcquireAfterDelay(t *testing.T) {
 // }
 
 func TestTimeDistribution(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	limit := new(100, time.Second)
 	defer limit.Stop(context.Background())
@@ -145,7 +146,7 @@ func TestTimeDistribution(t *testing.T) {
 }
 
 func TestStressBlocking(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	const (
 		N = 100
@@ -172,7 +173,7 @@ func TestStressBlocking(t *testing.T) {
 }
 
 func TestStressNoBlocking(t *testing.T) {
-	// defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t)
 
 	const (
 		N = 100
