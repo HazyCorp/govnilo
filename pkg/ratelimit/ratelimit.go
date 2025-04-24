@@ -59,7 +59,7 @@ func (l *Limiter) buildRL(spec Spec) ratelimit.Limiter {
 	if spec.Per == 0 {
 		rl = ratelimit.NewUnlimited()
 	} else if spec.Times != 0 {
-		rl = ratelimit.New(int(spec.Times), ratelimit.Per(spec.Per))
+		rl = ratelimit.New(int(spec.Times), ratelimit.Per(spec.Per), ratelimit.WithoutSlack)
 	} else {
 		rl = nil
 	}
