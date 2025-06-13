@@ -2,6 +2,7 @@ package taskrunner
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/HazyCorp/govnilo/common/hzlog"
 	"github.com/HazyCorp/govnilo/hazyerr"
+	"github.com/VictoriaMetrics/metrics"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -138,8 +140,17 @@ func (r *TaskRunner) RegisterTask(name string, task Task) error {
 		)
 	}
 
+	tState := &taskState{instances: nil}
+
+	metrics.GetOrCreateGauge(fmt.Sprintf(`task_runner_goroutines_total{task_name="%s"}`, name), func() float64 {
+		tState.mu.Lock()
+		defer tState.mu.Unlock()
+
+		return float64(len(tState.instances))
+	})
+
 	r.taskIDToTask[name] = task
-	r.taskIDToState[name] = &taskState{instances: nil}
+	r.taskIDToState[name] = tState
 
 	return nil
 }

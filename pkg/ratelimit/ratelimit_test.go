@@ -2,10 +2,12 @@ package ratelimit
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"os"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -228,4 +230,48 @@ func BenchmarkReferenceMutex(b *testing.B) {
 		j++
 		mu.Unlock()
 	}
+}
+
+func TestApproximateRateReachable(t *testing.T) {
+	perSecond := 50
+
+	rl := new(uint64(perSecond), time.Second)
+	goroutinesCount := 4
+	routineDuration := time.Millisecond * 30
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var c atomic.Uint64
+
+	var wg sync.WaitGroup
+	for range goroutinesCount {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			for {
+				if err := rl.Acquire(ctx); err != nil {
+					break
+				}
+
+				c.Add(1)
+				// time.Sleep(time.Duration(float64(routineDuration) * rand.Float64()))
+				time.Sleep(routineDuration)
+			}
+		}()
+	}
+
+	testTimeSeconds := 10
+
+	testTime := time.Duration(testTimeSeconds) * time.Second
+	time.Sleep(testTime)
+	cancel()
+	wg.Wait()
+
+	expectedIncrements := testTimeSeconds * perSecond
+	absDiff := math.Abs(float64(expectedIncrements) - float64(c.Load()))
+	diff := absDiff / float64(expectedIncrements)
+
+	require.Less(t, diff, 0.05, "expected to get difference less than 5%")
 }
