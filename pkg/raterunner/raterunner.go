@@ -11,6 +11,8 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/ratelimit"
 	"github.com/HazyCorp/govnilo/taskrunner"
 
+	"maps"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
@@ -66,7 +68,7 @@ func (t *taskSpec) neededInstances() uint64 {
 	)
 
 	// rate limitter will stop extra calls
-	instances = (instances + 1) * 2
+	instances = (instances + 1) * 10
 
 	return instances
 }
@@ -111,9 +113,7 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 			r.mu.Lock()
 			defer r.mu.Unlock()
 
-			for k, v := range r.tasks {
-				copied[k] = v
-			}
+			maps.Copy(copied, r.tasks)
 		}()
 
 		for taskName, task := range copied {
