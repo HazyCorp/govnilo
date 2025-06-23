@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const DefaultWindowSize = 128
+const DefaultWindowSize = 1024
 
 type AvgCounterSpec struct {
 	WindowSize uint64
