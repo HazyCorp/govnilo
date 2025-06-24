@@ -56,19 +56,19 @@ func (t *taskSpec) neededInstances() uint64 {
 		avg = float64(time.Second)
 	}
 
-	avgDuration := time.Duration(int64(avg))
+	statDuration := time.Duration(int64(avg))
 	t.l.Debug(
 		"task running stats",
-		slog.Duration("avg_duration", avgDuration),
+		slog.Duration("stat_duration", statDuration),
 		slog.Uint64("needs", t.targetRate.Times),
 		slog.Duration("per", t.targetRate.Per),
 	)
 	instances := uint64(
-		float64(t.targetRate.Times) * float64(avgDuration) / float64(t.targetRate.Per),
+		float64(t.targetRate.Times) * float64(statDuration) / float64(t.targetRate.Per),
 	)
 
 	// rate limitter will stop extra calls
-	instances = (instances + 1) * 20
+	instances = (instances + 1) * 2
 
 	return instances
 }
