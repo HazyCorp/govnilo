@@ -37,7 +37,7 @@ type taskSpec struct {
 	f    TaskFunc
 	name string
 
-	avgCounter       *AvgCounter
+	stat             Stat
 	targetRate       Rate
 	currentInstances uint64
 	rateLimitter     *ratelimit.Limiter
@@ -47,7 +47,7 @@ func (t *taskSpec) neededInstances() uint64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	avg, err := t.avgCounter.GetAvg()
+	avg, err := t.stat.GetStat()
 	if err != nil {
 		t.l.Info(
 			"cannot correct instances of task: cannot get average of it's running time, using a default value",
@@ -187,10 +187,11 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 	}
 
 	spec := &taskSpec{
-		l:          r.l.With(slog.String("task_name", taskName)),
-		f:          f,
-		name:       taskName,
-		avgCounter: NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
+		l:    r.l.With(slog.String("task_name", taskName)),
+		f:    f,
+		name: taskName,
+		// stat:       NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
+		stat:       NewPercentile(0.95, time.Second*30),
 		targetRate: Rate{Times: 0, Per: time.Second},
 		rateLimitter: ratelimit.New(
 			ratelimit.Spec{Times: 0, Per: time.Second},
@@ -271,7 +272,7 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 			}
 
 			duration := time.Since(start)
-			t.avgCounter.Append(uint64(duration))
+			t.stat.Append(uint64(duration))
 		}
 	}
 }

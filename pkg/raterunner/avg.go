@@ -39,7 +39,7 @@ func (c *AvgCounter) Append(val uint64) {
 	c.sum += val
 }
 
-func (c *AvgCounter) GetAvg() (float64, error) {
+func (c *AvgCounter) GetStat() (float64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
