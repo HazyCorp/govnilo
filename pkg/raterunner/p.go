@@ -5,6 +5,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Percentile struct {
@@ -62,6 +64,10 @@ func (p *Percentile) GetStat() (float64, error) {
 			vals = append(vals, v.Value.(observation).val)
 		}
 	}()
+
+	if len(vals) == 0 {
+		return 0, errors.Errorf("cannot calculate percentile for empty set of values")
+	}
 
 	// we need only snapshot here, don't need to hold mu for sort
 	slices.Sort(vals)
