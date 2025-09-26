@@ -11,6 +11,8 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/ratelimit"
 	"github.com/HazyCorp/govnilo/taskrunner"
 
+	"maps"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
@@ -35,7 +37,7 @@ type taskSpec struct {
 	f    TaskFunc
 	name string
 
-	avgCounter       *AvgCounter
+	stat             Stat
 	targetRate       Rate
 	currentInstances uint64
 	rateLimitter     *ratelimit.Limiter
@@ -45,7 +47,7 @@ func (t *taskSpec) neededInstances() uint64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	avg, err := t.avgCounter.GetAvg()
+	avg, err := t.stat.GetStat()
 	if err != nil {
 		t.l.Info(
 			"cannot correct instances of task: cannot get average of it's running time, using a default value",
@@ -54,15 +56,15 @@ func (t *taskSpec) neededInstances() uint64 {
 		avg = float64(time.Second)
 	}
 
-	avgDuration := time.Duration(int64(avg))
+	statDuration := time.Duration(int64(avg))
 	t.l.Debug(
 		"task running stats",
-		slog.Duration("avg_duration", avgDuration),
+		slog.Duration("stat_duration", statDuration),
 		slog.Uint64("needs", t.targetRate.Times),
 		slog.Duration("per", t.targetRate.Per),
 	)
 	instances := uint64(
-		float64(t.targetRate.Times) * float64(avgDuration) / float64(t.targetRate.Per),
+		float64(t.targetRate.Times) * float64(statDuration) / float64(t.targetRate.Per),
 	)
 
 	// rate limitter will stop extra calls
@@ -111,9 +113,7 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 			r.mu.Lock()
 			defer r.mu.Unlock()
 
-			for k, v := range r.tasks {
-				copied[k] = v
-			}
+			maps.Copy(copied, r.tasks)
 		}()
 
 		for taskName, task := range copied {
@@ -187,10 +187,11 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 	}
 
 	spec := &taskSpec{
-		l:          r.l.With(slog.String("task_name", taskName)),
-		f:          f,
-		name:       taskName,
-		avgCounter: NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
+		l:    r.l.With(slog.String("task_name", taskName)),
+		f:    f,
+		name: taskName,
+		// stat:       NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
+		stat:       NewPercentile(0.95, time.Second*30),
 		targetRate: Rate{Times: 0, Per: time.Second},
 		rateLimitter: ratelimit.New(
 			ratelimit.Spec{Times: 0, Per: time.Second},
@@ -271,7 +272,7 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 			}
 
 			duration := time.Since(start)
-			t.avgCounter.Append(uint64(duration))
+			t.stat.Append(uint64(duration))
 		}
 	}
 }
