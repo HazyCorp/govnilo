@@ -96,7 +96,7 @@ func (j *AsyncJsonFile[TState]) syncRoutine() {
 
 	for range ticker.C {
 		if err := j.sync(context.Background()); err != nil {
-			j.l.Warn("cannot sync the state to the file")
+			j.l.Warn("cannot sync the state to the file", hzlog.Error(err))
 		}
 	}
 }
