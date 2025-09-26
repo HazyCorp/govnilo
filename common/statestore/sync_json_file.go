@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/HazyCorp/govnilo/common/hzlog"
@@ -86,7 +87,8 @@ func (j *SyncJsonFile[TState]) Flush(ctx context.Context) error {
 
 // writeStateToTemp returns name of the tempfile
 func (j *SyncJsonFile[TState]) writeStateToTemp(st *TState) (string, error) {
-	tmp, err := os.CreateTemp("/tmp/", "json_file_storage")
+	tmpDir := filepath.Dir(j.c.Path) + "/"
+	tmp, err := os.CreateTemp(tmpDir, "json_file_storage")
 	if err != nil {
 		return "", errors.Wrap(err, "cannot open temporary file to make changes atomically")
 	}
