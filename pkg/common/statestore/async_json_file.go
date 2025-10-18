@@ -37,7 +37,7 @@ func NewAsyncJsonFile[TState any](c AsyncJsonFileConfig, defaultFunc defaultFunc
 		logger = hzlog.NopLogger()
 	}
 	logger = logger.With(
-		slog.String("component", "async_json_file_store"),
+		slog.String("component", "infra:async_json_file_store"),
 		slog.String("path", c.Path),
 	)
 

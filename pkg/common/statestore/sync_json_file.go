@@ -37,7 +37,7 @@ func NewSyncJsonFile[TState any](c SyncJsonFileConfig, defaultVal defaultFunc[TS
 		logger = hzlog.NopLogger()
 	}
 	logger = logger.With(
-		slog.String("component", "sync_json_file_store"),
+		slog.String("component", "infra:sync_json_file_store"),
 		slog.String("path", c.Path),
 	)
 

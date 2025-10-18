@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	hazycheck2 "github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/adminka/adminklient"
 	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 
@@ -19,8 +19,8 @@ type AdminSettingsProviderConfig struct {
 type AdminSettingsProviderIn struct {
 	fx.In
 
-	Checkers []hazycheck2.Checker `group:"checkers"`
-	Sploits  []hazycheck2.Sploit  `group:"sploits"`
+	Checkers []hazycheck.Checker `group:"checkers"`
+	Sploits  []hazycheck.Sploit  `group:"sploits"`
 	Logger   *slog.Logger
 	Config   *AdminSettingsProviderConfig
 }
@@ -30,8 +30,8 @@ var _ SettingsProvider = &AdminSettingsProvider{}
 type AdminSettingsProvider struct {
 	client   adminklient.Client
 	l        *slog.Logger
-	checkers map[hazycheck2.CheckerID]hazycheck2.Checker
-	sploits  map[hazycheck2.SploitID]hazycheck2.Sploit
+	checkers map[hazycheck.CheckerID]hazycheck.Checker
+	sploits  map[hazycheck.SploitID]hazycheck.Sploit
 }
 
 func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvider, error) {
@@ -40,19 +40,19 @@ func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvide
 		return nil, errors.Wrap(err, "cannot create adminklient.Client")
 	}
 
-	checkers := make(map[hazycheck2.CheckerID]hazycheck2.Checker, len(in.Checkers))
+	checkers := make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers))
 	for _, c := range in.Checkers {
 		checkers[c.CheckerID()] = c
 	}
 
-	sploits := make(map[hazycheck2.SploitID]hazycheck2.Sploit)
+	sploits := make(map[hazycheck.SploitID]hazycheck.Sploit)
 	for _, s := range in.Sploits {
 		sploits[s.SploitID()] = s
 	}
 
 	return &AdminSettingsProvider{
 		client:   client,
-		l:        in.Logger.With(slog.String("component", "adminka_settings_provider")),
+		l:        in.Logger.With(slog.String("component", "infra:adminka_settings_provider")),
 		checkers: checkers,
 		sploits:  sploits,
 	}, nil

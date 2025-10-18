@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
-	checkerctrl2 "github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/checkerctrl"
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
@@ -17,12 +17,12 @@ import (
 type Config struct {
 	fx.Out
 
-	Logging          hzlog.Config                        `json:"logging" yaml:"logging"`
-	Serve            Serve                               `json:"serve" yaml:"serve"`
-	AsyncFileStore   checkerctrl2.AsyncFileStoreConfig   `json:"async_file_store" yaml:"async_file_store"`
-	Controller       checkerctrl2.Config                 `json:"controller" yaml:"controller"`
-	Metrics          metricsrv.Config                    `json:"metrics" yaml:"metrics"`
-	SettingsProvider checkerctrl2.SettingsProviderConfig `json:"settings_provider" yaml:"settings_provider"`
+	Logging          hzlog.Config                       `json:"logging" yaml:"logging"`
+	Serve            Serve                              `json:"serve" yaml:"serve"`
+	AsyncFileStore   checkerctrl.AsyncFileStoreConfig   `json:"async_file_store" yaml:"async_file_store"`
+	Controller       checkerctrl.Config                 `json:"controller" yaml:"controller"`
+	Metrics          metricsrv.Config                   `json:"metrics" yaml:"metrics"`
+	SettingsProvider checkerctrl.SettingsProviderConfig `json:"settings_provider" yaml:"settings_provider"`
 }
 
 func defaultConfig() *Config {
@@ -30,18 +30,18 @@ func defaultConfig() *Config {
 		Serve: Serve{
 			Port: 13337,
 		},
-		AsyncFileStore: checkerctrl2.AsyncFileStoreConfig{
+		AsyncFileStore: checkerctrl.AsyncFileStoreConfig{
 			Path:         "/tmp/checker_state.bin",
 			SyncInterval: time.Second,
 		},
-		Controller: checkerctrl2.Config{
+		Controller: checkerctrl.Config{
 			SyncInterval: time.Second,
 		},
 		Metrics: metricsrv.Config{
 			Port: 14448,
 		},
-		SettingsProvider: checkerctrl2.SettingsProviderConfig{
-			FromFile: &checkerctrl2.FileSettingsProviderConfig{
+		SettingsProvider: checkerctrl.SettingsProviderConfig{
+			FromFile: &checkerctrl.FileSettingsProviderConfig{
 				Path: "/etc/govnilo/settings.yaml",
 			},
 		},

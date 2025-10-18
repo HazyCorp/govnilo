@@ -81,7 +81,7 @@ func New(in ControllerIn) *Controller {
 	}
 
 	return &Controller{
-		l:                  in.Logger.With(slog.String("component", "checker-controller")),
+		l:                  in.Logger.With(slog.String("component", "infra:checker-controller")),
 		registeredCheckers: idToChecker,
 		registeredSploits:  idToSploit,
 		storage:            in.Storage,
@@ -156,7 +156,7 @@ func (c *Controller) run(ctx context.Context) error {
 				hzlog.Error(err),
 			)
 		} else {
-			c.l.Info("checker state syncronized")
+			c.l.DebugContext(ctx, "checker state syncronized")
 		}
 	}
 }
@@ -166,7 +166,7 @@ func (c *Controller) genSploitRunAttackTask(
 ) raterunner.TaskFunc {
 	sploitID := sploit.SploitID()
 	m := c.sploitMetricsFor(sploitID)
-	l := c.l.With(slog.Any("sploit_id", sploitID))
+	l := c.l.With(slog.Any("sploit_id", sploitID), slog.String("component", "business-infra:sploit"))
 
 	return func(ctx context.Context) error {
 		// Generate trace ID for debugging (automatically adds to hzlog context)
@@ -178,6 +178,7 @@ func (c *Controller) genSploitRunAttackTask(
 			return errors.Errorf("cannot find service %s in current settings", sploitID.Service)
 		}
 
+		l := hzlog.GetLogger(ctx, l).With(slog.String("target", serviceSettings.Target))
 		start := time.Now()
 
 		var sploitErr error
@@ -197,8 +198,11 @@ func (c *Controller) genSploitRunAttackTask(
 
 			m.SuccessCounter.Inc()
 			m.SuccessDuration.UpdateDuration(start)
+
+			l.DebugContext(ctx, "sploit.RunAttack succeeded")
 		}()
 
+		l.DebugContext(ctx, "govnilo is running sploit.RunAttack", slog.String("target", serviceSettings.Target))
 		sploitErr = sploit.RunAttack(ctx, serviceSettings.Target)
 
 		// don't need to save anything after sploit running
@@ -216,13 +220,17 @@ func (c *Controller) genCheckerCheckTask(
 	return func(ctx context.Context) error {
 		// Generate trace ID for debugging (automatically adds to hzlog context)
 		ctx = hzlog.WithNewTraceID(ctx)
-		l = hzlog.GetLogger(ctx, l)
 
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[checkerID.Service]
 		if serviceSettings == nil {
 			return errors.Errorf("cannot find service %s in current settings", checkerID.Service)
 		}
+
+		l := hzlog.GetLogger(ctx, l).With(
+			slog.String("target", serviceSettings.Target),
+			slog.String("component", "business-infra:checker"),
+		)
 
 		checkerSettings := serviceSettings.Checkers[checkerID.Name]
 		if checkerSettings == nil {
@@ -265,24 +273,28 @@ func (c *Controller) genCheckerCheckTask(
 			}
 
 			if success {
-				l.DebugContext(ctx, "checker run succeed")
+				l.DebugContext(ctx, "checker.Check run succeed")
 				m.SuccessCheckCounter.Inc()
 				m.SuccessCheckDuration.UpdateDuration(start)
 				m.SuccessCheckPoints.Add(checkerSettings.Check.SuccessPoints)
 
-				l.DebugContext(ctx, "saving the data", slog.String("data", string(data)))
+				l.DebugContext(ctx, "saving the data", slog.Any("data", data))
 				if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
 					l.WarnContext(ctx, "cannot save check data to storage", hzlog.Error(err))
 					return
 				}
 			} else {
+				l.DebugContext(ctx, "checker.Check run failed", hzlog.Error(checkErr))
+
 				m.FailCheckCounter.Inc()
 				m.FailCheckDuration.UpdateDuration(start)
 				m.FailCheckPenalty.Add(checkerSettings.Check.FailPenalty)
 			}
 		}()
 
+		l.DebugContext(ctx, "govnilo is running checker.Check")
 		data, checkErr = checker.Check(ctx, serviceSettings.Target)
+
 		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
 			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
@@ -312,10 +324,17 @@ func (c *Controller) genCheckerGetTask(
 			return errors.Errorf("cannot find service %s in current settings", checkerID.Service)
 		}
 
+		l := hzlog.GetLogger(ctx, l).With(
+			slog.String("target", serviceSettings.Target),
+			slog.String("component", "business-infra:checker"),
+		)
+
 		checkerSettings := serviceSettings.Checkers[checkerID.Name]
 		if checkerSettings == nil {
 			return errors.Errorf("cannot find checker %s in %s service settings", checkerID.Name, checkerID.Service)
 		}
+
+		l.DebugContext(ctx, "trying to get data from pool")
 
 		pool, err := c.storage.GetCheckerDataPool(ctx, checker.CheckerID())
 		if err != nil {
@@ -357,15 +376,17 @@ func (c *Controller) genCheckerGetTask(
 
 				// if checker.Get fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
 				success = false
-				l.Debug("checker.Get of failed with message", hzlog.Error(getErr))
 			}
 
 			if success {
-				l.Debug("checker.Get succeed")
+				l.DebugContext(ctx, "checker.Get succeed")
+
 				m.SuccessGetCounter.Inc()
 				m.SuccessGetDuration.UpdateDuration(start)
 				m.SuccessGetPoints.Add(checkerSettings.Get.SuccessPoints)
 			} else {
+				l.DebugContext(ctx, "checker.Get failed", hzlog.Error(getErr))
+
 				m.FailGetCounter.Inc()
 				m.FailGetDuration.UpdateDuration(start)
 				m.FailGetPenalty.Add(checkerSettings.Get.FailPenalty)
@@ -375,15 +396,18 @@ func (c *Controller) genCheckerGetTask(
 		idx := rand.Intn(len(pool))
 		data := pool[idx]
 
+		l.DebugContext(ctx, "govnilo is running checker.Get", slog.Any("data", data.Data))
 		getErr = checker.Get(ctx, serviceSettings.Target, data.Data)
+
 		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
 			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
 				// mark error as internal
-				l.Debug("checker.Get cancelled by task runner")
+				l.DebugContext(ctx, "checker.Get cancelled by task runner")
 				cancelled = true
 			}
 		}
+
 		return nil
 	}
 }

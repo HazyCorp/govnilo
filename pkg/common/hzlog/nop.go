@@ -5,6 +5,8 @@ import (
 	"log/slog"
 )
 
+var nopHandler = slog.NewTextHandler(io.Discard, nil)
+
 func NopLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
+	return slog.New(nopHandler)
 }

@@ -105,7 +105,6 @@ func GetConstructors() []interface{} {
 			logger.Info("starting with config", slog.Any("config", config))
 			return config
 		},
-		NewLogger,
 		NewGRPCServer,
 		NewSaveStrategy,
 		checkerctrl.NewFX,
