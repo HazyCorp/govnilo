@@ -96,14 +96,15 @@ func GetConstructors() []interface{} {
 		os.Exit(1)
 	}
 
-	logger.Info("starting with config", slog.Any("config", config))
-
 	knownConstructors := append(
 		registrar.GetRegistered(),
 		// fxutil.AsIface[hazycheck.Provider](hazycheck.NewDummyProvider),
 		// checkerserver.NewFX,
 		func() *slog.Logger { return logger },
-		func() configuration.Config { return config },
+		func() configuration.Config {
+			logger.Info("starting with config", slog.Any("config", config))
+			return config
+		},
 		NewLogger,
 		NewGRPCServer,
 		NewSaveStrategy,

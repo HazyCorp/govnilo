@@ -17,6 +17,15 @@ func ContextWith(ctx context.Context, attrs ...slog.Attr) context.Context {
 	return context.WithValue(ctx, attrsKey{}, newAttrs)
 }
 
+func GetLogger(ctx context.Context, base *slog.Logger) *slog.Logger {
+	attrs := getAttrs(ctx)
+	if len(attrs) == 0 {
+		return base
+	}
+
+	return slog.New(base.Handler().WithAttrs(attrs))
+}
+
 func getAttrs(ctx context.Context) []slog.Attr {
 	currentAttrs := ctx.Value(attrsKey{})
 	if currentAttrs == nil {

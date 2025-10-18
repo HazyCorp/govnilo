@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/HazyCorp/govnilo/internal/fxbuild"
-	hazycheck2 "github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -34,7 +34,7 @@ func buildFXLogger(enabled bool) fx.Option {
 	})
 }
 
-func ExtractCheckers(enableFXLogs bool) ([]hazycheck2.Checker, error) {
+func ExtractCheckers(enableFXLogs bool) ([]hazycheck.Checker, error) {
 	fxOpts := []fx.Option{
 		fx.Provide(
 			fxbuild.GetConstructors()...,
@@ -45,10 +45,10 @@ func ExtractCheckers(enableFXLogs bool) ([]hazycheck2.Checker, error) {
 	type checkersIn struct {
 		fx.In
 
-		Checkers []hazycheck2.Checker `group:"checkers"`
+		Checkers []hazycheck.Checker `group:"checkers"`
 	}
 
-	var registeredCheckers []hazycheck2.Checker
+	var registeredCheckers []hazycheck.Checker
 	fxOpts = append(fxOpts, fx.Invoke(func(in checkersIn) {
 		registeredCheckers = in.Checkers
 	}))
@@ -62,7 +62,7 @@ func ExtractCheckers(enableFXLogs bool) ([]hazycheck2.Checker, error) {
 	return registeredCheckers, nil
 }
 
-func ExtractSploits(enableFXLogs bool) ([]hazycheck2.Sploit, error) {
+func ExtractSploits(enableFXLogs bool) ([]hazycheck.Sploit, error) {
 	fxOpts := []fx.Option{
 		fx.Provide(
 			fxbuild.GetConstructors()...,
@@ -73,10 +73,10 @@ func ExtractSploits(enableFXLogs bool) ([]hazycheck2.Sploit, error) {
 	type sploitsIn struct {
 		fx.In
 
-		Sploits []hazycheck2.Sploit `group:"sploits"`
+		Sploits []hazycheck.Sploit `group:"sploits"`
 	}
 
-	var registeredSploits []hazycheck2.Sploit
+	var registeredSploits []hazycheck.Sploit
 	fxOpts = append(fxOpts, fx.Invoke(func(in sploitsIn) {
 		registeredSploits = in.Sploits
 	}))
