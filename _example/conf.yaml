@@ -1,0 +1,28 @@
+serve:
+  port: 15559
+
+async_file_store:
+  path: /tmp/checker-state.bin
+  sync_interval: 1s
+
+controller:
+  sync_interval: 1s
+  target_host: localhost
+
+metrics:
+  port: 14448
+
+settings_provider:
+  # from_admin:
+  #   async:
+  #     refresh_interval: 1s
+  #     timeout: 1s
+  #   transport:
+  #     grpc:
+  #       target: 'adminka:8500'
+  from_file:
+    path: ./settings.yaml
+
+logging:
+  mode: console
+  level: debug
