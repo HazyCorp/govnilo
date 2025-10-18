@@ -2,6 +2,8 @@ package hazycheck
 
 import (
 	"context"
+	"log/slog"
+	"reflect"
 
 	"github.com/HazyCorp/govnilo/internal/registrar"
 
@@ -11,10 +13,29 @@ import (
 // RegisterChecker registers constructor of the checker with needed annotations.
 // If you need to register checker, use THIS function.
 // If you need to register some dependencies for your checker, use registrar.RegisterChecker
-func RegisterChecker(constructor interface{}) {
+func RegisterChecker(constructor any) {
+	constr := reflect.ValueOf(constructor)
+	newConstr := reflect.MakeFunc(constr.Type(), func(args []reflect.Value) []reflect.Value {
+		newVals := make([]reflect.Value, 0, len(args))
+		for _, val := range args {
+			t := val.Type()
+
+			if t == reflect.TypeOf((*slog.Logger)(nil)) {
+				l := val.Interface().(*slog.Logger)
+				l = l.With(slog.String("component", "business:checker"))
+
+				val = reflect.ValueOf(l)
+			}
+
+			newVals = append(newVals, val)
+		}
+
+		return constr.Call(newVals)
+	})
+
 	registrar.Register(
 		fx.Annotate(
-			constructor,
+			newConstr.Interface(),
 			fx.As(new(Checker)),
 			fx.ResultTags(`group:"checkers"`),
 		),

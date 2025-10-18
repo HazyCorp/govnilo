@@ -28,7 +28,7 @@ type taskInstance struct {
 var ErrTaskCancelled = errors.Errorf("task cancelled")
 
 func (t *taskInstance) stop(ctx context.Context) error {
-	slog.Info("stopping task instance")
+	slog.Debug("stopping task instance")
 
 	t.stopped.Store(true)
 	t.cancel(ErrTaskCancelled)
@@ -68,7 +68,7 @@ type TaskRunner struct {
 
 func NewTaskRunner(l *slog.Logger) *TaskRunner {
 	return &TaskRunner{
-		l:           l.With(slog.String("component", "task-runner")),
+		l:           l.With(slog.String("component", "infra:task-runner")),
 		baseContext: context.TODO(),
 
 		taskIDToState: make(map[string]*taskState),

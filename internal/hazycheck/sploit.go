@@ -2,6 +2,8 @@ package hazycheck
 
 import (
 	"context"
+	"log/slog"
+	"reflect"
 
 	"github.com/HazyCorp/govnilo/internal/registrar"
 
@@ -12,10 +14,29 @@ import (
 // If sploit is not registered by this method, it will not be accessible in runtime.
 // To register a sploit, you need to provide it's constructor function. All arguments of the constructor
 // will be fullfilled by the infrastructure. You can, for example, ask *slog.Logger to be provided to your constructor.
-func RegisterSploit(constructor interface{}) {
+func RegisterSploit(constructor any) {
+	constr := reflect.ValueOf(constructor)
+	newConstr := reflect.MakeFunc(constr.Type(), func(args []reflect.Value) []reflect.Value {
+		newVals := make([]reflect.Value, 0, len(args))
+		for _, val := range args {
+			t := val.Type()
+
+			if t == reflect.TypeOf((*slog.Logger)(nil)) {
+				l := val.Interface().(*slog.Logger)
+				l = l.With(slog.String("component", "business:sploit"))
+
+				val = reflect.ValueOf(l)
+			}
+
+			newVals = append(newVals, val)
+		}
+
+		return constr.Call(newVals)
+	})
+
 	registrar.Register(
 		fx.Annotate(
-			constructor,
+			newConstr.Interface(),
 			fx.As(new(Sploit)),
 			fx.ResultTags(`group:"sploits"`),
 		),

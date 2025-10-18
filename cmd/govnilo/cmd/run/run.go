@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -41,8 +40,8 @@ var RunCmd = &cobra.Command{
 				func(*metricsrv.Server, *checkerctrl.Controller) {},
 			),
 
-			fx.WithLogger(func(l *zap.Logger) fxevent.Logger {
-				return &fxevent.ZapLogger{Logger: l}
+			fx.WithLogger(func(l *slog.Logger) fxevent.Logger {
+				return &fxevent.SlogLogger{Logger: l}
 			}),
 		)
 

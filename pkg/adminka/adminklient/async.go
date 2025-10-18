@@ -37,7 +37,7 @@ func NewAsync(inner Client, conf AsyncClientConfig, opts ...ClientOpt) *AsyncCli
 	if o.Logger == nil {
 		o.Logger = hzlog.NopLogger()
 	}
-	o.Logger = o.Logger.With(slog.String("component", "async_adminka_client"))
+	o.Logger = o.Logger.With(slog.String("component", "infra:async_adminka_client"))
 
 	if conf.RefreshInterval == 0 {
 		conf.RefreshInterval = defaultRefreshInterval

@@ -17,6 +17,11 @@ services:
 
   example:
     target: 'example.service:8000'
+    sploits:
+      example_attack:
+        rate:
+          times: 1
+          per: 1s
     checkers:
       sleeper:
         check:

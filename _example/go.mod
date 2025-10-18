@@ -2,7 +2,10 @@ module github.com/HazyCorp/govnilo/_example
 
 go 1.24
 
-require github.com/HazyCorp/govnilo v0.0.0
+require (
+	github.com/HazyCorp/govnilo v0.0.0
+	github.com/pkg/errors v0.9.1
+)
 
 require (
 	github.com/VictoriaMetrics/metrics v1.35.2 // indirect
@@ -10,9 +13,9 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/samber/lo v1.49.1 // indirect
-	github.com/samber/slog-common v0.18.1 // indirect
+	github.com/samber/lo v1.51.0 // indirect
+	github.com/samber/slog-common v0.19.0 // indirect
+	github.com/samber/slog-multi v1.5.0 // indirect
 	github.com/samber/slog-zap/v2 v2.6.2 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -25,7 +28,7 @@ require (
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/grpc v1.71.0 // indirect

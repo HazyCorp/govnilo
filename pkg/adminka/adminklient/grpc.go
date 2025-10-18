@@ -31,7 +31,7 @@ func NewGRPC(c GRPCClientConfig, opts ...ClientOpt) (Client, error) {
 	if o.Logger == nil {
 		o.Logger = hzlog.NopLogger()
 	}
-	o.Logger = o.Logger.With(slog.String("component", "grpc_adminka_client"))
+	o.Logger = o.Logger.With(slog.String("component", "infra:grpc_adminka_client"))
 
 	conn, err := grpc.NewClient(c.Target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

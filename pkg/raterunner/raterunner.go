@@ -47,7 +47,7 @@ func (t *taskSpec) neededInstances() uint64 {
 
 	avg, err := t.avgCounter.GetAvg()
 	if err != nil {
-		t.l.Info(
+		t.l.Debug(
 			"cannot correct instances of task: cannot get average of it's running time, using a default value",
 			slog.Duration("value", time.Second),
 		)
@@ -82,7 +82,7 @@ type RateRunner struct {
 
 func New(l *slog.Logger) *RateRunner {
 	return &RateRunner{
-		l: l.With(slog.String("component", "rate-runner")),
+		l: l.With(slog.String("component", "infra:rate-runner")),
 
 		tr:    taskrunner.NewTaskRunner(l),
 		tasks: make(map[string]*taskSpec),

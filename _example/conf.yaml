@@ -24,5 +24,9 @@ settings_provider:
     path: ./settings.yaml
 
 logging:
-  mode: console
+  mode: json
   level: debug
+  filter:
+    skip_infra:
+      enabled: true
+      on_level: info
