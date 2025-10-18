@@ -1,10 +1,10 @@
 package do
 
 import (
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/do/check"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/do/get"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/do/sploit"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/do/check"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/do/get"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/do/sploit"
+	"github.com/HazyCorp/govnilo/internal/cmd/globflags"
 	"github.com/spf13/cobra"
 )
 

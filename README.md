@@ -17,7 +17,7 @@ This project follows the standard Go project layout:
 ### Main Binary
 
 ```bash
-go build -o bin/govnilo ./cmd/govnilo
+go build -o bin/govnilo ./internal/cmd
 ```
 
 ### Example Binary

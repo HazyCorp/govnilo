@@ -1,7 +1,7 @@
 package govnilo
 
 import (
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 )
@@ -24,10 +24,8 @@ var (
 
 	InternalError = hazycheck.InternalError
 
-	// Trace ID functions (read-only for developers)
 	GetTraceID     = hzlog.GetTraceID
 	MustGetTraceID = hzlog.MustGetTraceID
-	LogWithTraceID = hzlog.LogWithTraceID
 	FormatTraceID  = hzlog.FormatTraceID
 	GetLogger      = hzlog.GetLogger
 )
