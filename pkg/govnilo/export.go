@@ -2,7 +2,7 @@ package govnilo
 
 import (
 	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 )
 
 type (

@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"

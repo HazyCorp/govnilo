@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HazyCorp/govnilo/common/hzlog"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"golang.org/x/time/rate"
 )
 

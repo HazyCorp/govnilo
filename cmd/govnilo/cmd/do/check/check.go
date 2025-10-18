@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
-	"github.com/HazyCorp/govnilo/cmdutil"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"

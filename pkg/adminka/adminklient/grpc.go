@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/common/hzlog"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/proto"
 
 	"github.com/pkg/errors"

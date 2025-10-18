@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
-	"github.com/HazyCorp/govnilo/cmdutil"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 )
 
 var sploitName string

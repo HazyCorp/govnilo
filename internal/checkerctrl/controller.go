@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/taskrunner"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/pkg/raterunner"
-	"github.com/HazyCorp/govnilo/taskrunner"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"

@@ -2,7 +2,8 @@ package hazycheck
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/registrar"
+
+	"github.com/HazyCorp/govnilo/internal/registrar"
 
 	"go.uber.org/fx"
 )

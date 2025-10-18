@@ -2,10 +2,11 @@ package statestore
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/hzlog"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"github.com/pkg/errors"
 )

@@ -2,8 +2,9 @@ package adminklient
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/checkersettings"
 	"log/slog"
+
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 
 	"github.com/pkg/errors"
 )

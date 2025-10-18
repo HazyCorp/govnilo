@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"runtime"
 
-	"github.com/HazyCorp/govnilo/checkerctrl"
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
-	"github.com/HazyCorp/govnilo/fxbuild"
-	"github.com/HazyCorp/govnilo/metricsrv"
+	"github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/fxbuild"
+	"github.com/HazyCorp/govnilo/internal/metricsrv"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
