@@ -1,10 +1,11 @@
 *.iml
 *.ipr
 *.iws
-.idea/
-/build/
-/dist/
-/out/
+/**/.idea/
+/**/.vscode/
+/**/build/
+/**/dist/
+/**/out/
 vcs.xml
 
 # Binaries
