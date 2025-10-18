@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"runtime"
 
-	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/cmd/globflags"
 	"github.com/HazyCorp/govnilo/internal/fxbuild"
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
 

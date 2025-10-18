@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/do"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/list"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/cmd/run"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/do"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/list"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/run"
 	"github.com/HazyCorp/govnilo/internal/util"
 
 	"github.com/spf13/cobra"
