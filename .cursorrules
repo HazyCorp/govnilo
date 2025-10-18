@@ -1,0 +1,87 @@
+# Govnilo - Keep-Alive Checker and Sploit Framework
+
+## Project Overview
+Govnilo is a Go framework for implementing keep-alive checkers and sploits (exploits) for services. It provides infrastructure for testing service consistency and running attacks against target services.
+
+## Core Concepts
+
+### Checkers
+- **Purpose**: Keep-alive checkers that verify service consistency over time
+- **Pattern**: CHECK → GET cycle to test data persistence
+- **Registration**: Use `hazycheck.RegisterChecker()` to register checker implementations
+- **Interface**: Must implement `Checker` interface with `Check()`, `Get()`, and `CheckerID()` methods
+
+### Sploits (Exploits)
+- **Purpose**: Run attacks against target services
+- **Registration**: Use `hazycheck.RegisterSploit()` to register sploit implementations  
+- **Interface**: Must implement `Sploit` interface with `RunAttack()` and `SploitID()` methods
+
+## Checker Interface
+```go
+type Checker interface {
+    // Check runs the most common flow of your service
+    // Returns data that should persist (e.g., user credentials)
+    Check(ctx context.Context, target string) ([]byte, error)
+    
+    // Get verifies that data from Check still exists in service
+    // Tests service consistency over time
+    Get(ctx context.Context, target string, data []byte) error
+    
+    // CheckerID returns service name and checker name
+    CheckerID() CheckerID
+}
+```
+
+## Sploit Interface
+```go
+type Sploit interface {
+    // RunAttack runs an attack on the service at target
+    RunAttack(ctx context.Context, target string) error
+    
+    // SploitID returns service name and sploit name
+    SploitID() SploitID
+}
+```
+
+## Architecture
+- **cmd/**: Command-line tools for running checkers and sploits
+- **internal/**: Core framework logic and orchestration
+- **pkg/**: Public API for developers to implement checkers/sploits
+- **proto/**: gRPC communication protocols
+- **_example/**: Example implementations of checkers and sploits
+
+## Key Components
+- **checkerctrl/**: Orchestrates checker execution and data persistence
+- **hazycheck/**: Registration system for checkers and sploits
+- **common/**: Shared utilities for logging, state management
+- **ratelimit/**: Controls execution rate of operations
+- **raterunner/**: Manages timing and execution cycles
+
+## Developer Experience
+- Implement `Checker` interface for keep-alive testing
+- Implement `Sploit` interface for attack simulation
+- Use registration functions to make them available at runtime
+- Library handles all orchestration, rate limiting, and data persistence
+- Use dependency injection (fx) for constructor parameters
+
+## Registration Pattern
+```go
+func init() {
+    hazycheck.RegisterChecker(NewMyChecker)
+    hazycheck.RegisterSploit(NewMySploit)
+}
+```
+
+## Development Guidelines
+- Checkers must be concurrently safe
+- Check method creates data, Get method verifies persistence
+- Sploits run attacks and don't need background jobs
+- Use proper error handling and context cancellation
+- Follow the registration pattern in init() functions
+
+## Trace ID for Debugging
+- Each Check, Get, and RunAttack operation gets a unique trace ID
+- Trace IDs are automatically included in all logs via hzlog context
+- Use `logger.DebugContext(ctx, "message")` for automatic trace ID inclusion
+- Use `govnilo.GetTraceID(ctx)` to retrieve the trace ID if needed
+- Trace ID generation and hzlog context integration is handled by the infrastructure

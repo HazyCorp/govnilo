@@ -32,6 +32,7 @@ type Sploit interface {
 	// RunAttack must run an attack on the service, located at target.
 	// RunAttack will be called by the infrastructure code, so you don't need to run any background jobs
 	// yourself.
+	// The context contains a trace ID for debugging: use govnilo.GetTraceID(ctx) to retrieve it.
 	RunAttack(ctx context.Context, target string) error
 
 	// SploitID must return the service name, which this sploit is responsible for

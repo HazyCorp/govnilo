@@ -45,6 +45,7 @@ func defaultConfig() *Config {
 				Path: "/etc/govnilo/settings.yaml",
 			},
 		},
+		Logging: hzlog.DefaultConfig(),
 	}
 }
 

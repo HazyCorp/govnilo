@@ -23,6 +23,15 @@ func (h *contextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+func MustBuild(c Config) *slog.Logger {
+	logger, err := Build(c)
+	if err != nil {
+		panic("cannot build logger: " + err.Error())
+	}
+
+	return logger
+}
+
 func Build(c Config) (*slog.Logger, error) {
 	zapC := zap.NewProductionConfig()
 
@@ -39,11 +48,12 @@ func Build(c Config) (*slog.Logger, error) {
 		c.Mode = "json"
 	}
 
-	if c.Mode == "console" {
+	switch c.Mode {
+	case "console":
 		zapC.Encoding = "console"
-	} else if c.Mode == "json" {
+	case "json":
 		zapC.Encoding = "json"
-	} else {
+	default:
 		return nil, errors.Wrapf(err, "cannot build zap logger, unknown encoding %s, allowed options are only [console, json]", c.Mode)
 	}
 

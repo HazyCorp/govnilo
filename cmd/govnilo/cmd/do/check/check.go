@@ -1,12 +1,13 @@
 package check
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/util"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -19,7 +20,8 @@ var CheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "runs specified Checker.Check on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
+		ctx := hzlog.WithNewTraceID(cmd.Context())
+		// l := hzlog.MustBuild(hzlog.DefaultConfig())
 
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
@@ -48,15 +50,15 @@ var CheckCmd = &cobra.Command{
 		}
 		duration := time.Since(start)
 
-		fmt.Printf(
-			"Service name: %s\n"+
-				"Checker name: %s\n"+
-				"Target:       %s\n"+
-				"Method:       Checker.Check\n"+
-				"Duration:     %s\n"+
-				"Output:       %s\n",
-			service, checkerName, target, duration, string(data),
-		)
+		output := map[string]any{
+			"service":  service,
+			"checker":  checkerName,
+			"target":   target,
+			"method":   "Checker.Check",
+			"duration": duration.String(),
+			"output":   string(data),
+		}
+		util.PrintJson(output)
 		return nil
 	},
 }

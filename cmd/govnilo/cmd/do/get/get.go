@@ -1,12 +1,12 @@
 package get
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/util"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -52,14 +52,14 @@ var GetCmd = &cobra.Command{
 		}
 		duration := time.Since(start)
 
-		fmt.Printf(
-			"Service name: %s\n"+
-				"Checker name: %s\n"+
-				"Target:       %s\n"+
-				"Method:       Checker.Get\n"+
-				"Duration:     %s\n",
-			service, checkerName, target, duration,
-		)
+		output := map[string]any{
+			"service":  service,
+			"checker":  checkerName,
+			"target":   target,
+			"method":   "Checker.Get",
+			"duration": duration.String(),
+		}
+		util.PrintJson(output)
 		return nil
 	},
 }

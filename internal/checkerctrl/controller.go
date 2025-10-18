@@ -169,6 +169,9 @@ func (c *Controller) genSploitRunAttackTask(
 	l := c.l.With(slog.Any("sploit_id", sploitID))
 
 	return func(ctx context.Context) error {
+		// Generate trace ID for debugging (automatically adds to hzlog context)
+		ctx = hzlog.WithNewTraceID(ctx)
+
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[sploitID.Service]
 		if serviceSettings == nil {
@@ -211,6 +214,10 @@ func (c *Controller) genCheckerCheckTask(
 	l := c.l.With("checker_id", checkerID)
 
 	return func(ctx context.Context) error {
+		// Generate trace ID for debugging (automatically adds to hzlog context)
+		ctx = hzlog.WithNewTraceID(ctx)
+		l = hzlog.GetLogger(ctx, l)
+
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[checkerID.Service]
 		if serviceSettings == nil {
@@ -251,22 +258,19 @@ func (c *Controller) genCheckerCheckTask(
 					return
 				}
 
-				l.Debug(
-					"checker.Check errored",
-					hzlog.Error(checkErr),
-				)
+				l.DebugContext(ctx, "checker.Check errored", hzlog.Error(checkErr))
 
 				// if checker.Check fails -- it's OK, it's expected behaviour, so, we don't need to fail this task
 				success = false
 			}
 
 			if success {
-				l.Debug("checker run succeed", slog.Any("checker_id", checker.CheckerID()))
+				l.DebugContext(ctx, "checker run succeed")
 				m.SuccessCheckCounter.Inc()
 				m.SuccessCheckDuration.UpdateDuration(start)
 				m.SuccessCheckPoints.Add(checkerSettings.Check.SuccessPoints)
 
-				l.Debug("saving the data", slog.String("data", string(data)))
+				l.DebugContext(ctx, "saving the data", slog.String("data", string(data)))
 				if err := c.saveCheckerData(ctx, checker.CheckerID(), data); err != nil {
 					l.WarnContext(ctx, "cannot save check data to storage", hzlog.Error(err))
 					return
@@ -282,7 +286,7 @@ func (c *Controller) genCheckerCheckTask(
 		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
 			if errors.Is(cause, taskrunner.ErrTaskCancelled) {
-				l.Debug("checker.Check cancelled by task runner")
+				l.DebugContext(ctx, "checker.Check cancelled by task runner")
 				cancelled = true
 			}
 		}
@@ -299,6 +303,9 @@ func (c *Controller) genCheckerGetTask(
 	l := c.l.With(slog.Any("checker_id", checker.CheckerID()))
 
 	return func(ctx context.Context) error {
+		// Generate trace ID for debugging (automatically adds to hzlog context)
+		ctx = hzlog.WithNewTraceID(ctx)
+
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[checkerID.Service]
 		if serviceSettings == nil {
