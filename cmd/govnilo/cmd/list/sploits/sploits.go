@@ -1,8 +1,8 @@
 package sploits
 
 import (
-	"github.com/HazyCorp/govnilo/cmdutil"
-	"github.com/HazyCorp/govnilo/util"
+	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/internal/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

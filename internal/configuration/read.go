@@ -1,12 +1,13 @@
 package configuration
 
 import (
-	checkerctrl2 "github.com/HazyCorp/govnilo/checkerctrl"
-	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/metricsrv"
 	"os"
 	"time"
+
+	"github.com/HazyCorp/govnilo/cmd/govnilo/globflags"
+	checkerctrl2 "github.com/HazyCorp/govnilo/internal/checkerctrl"
+	"github.com/HazyCorp/govnilo/internal/metricsrv"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"

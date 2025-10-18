@@ -3,7 +3,7 @@ package checkerctrl
 import (
 	"fmt"
 
-	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
+	hazycheck2 "github.com/HazyCorp/govnilo/internal/hazycheck"
 
 	"github.com/VictoriaMetrics/metrics"
 )

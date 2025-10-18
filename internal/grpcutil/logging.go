@@ -2,9 +2,10 @@ package grpcutil
 
 import (
 	"context"
-	"github.com/HazyCorp/govnilo/common/hzlog"
 	"log/slog"
 	"time"
+
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"google.golang.org/grpc"
 )

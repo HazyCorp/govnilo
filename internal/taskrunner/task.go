@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/HazyCorp/govnilo/common/hzlog"
-	"github.com/HazyCorp/govnilo/hazyerr"
+	"github.com/HazyCorp/govnilo/internal/hazyerr"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"

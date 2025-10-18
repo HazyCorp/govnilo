@@ -3,11 +3,12 @@ package adminklient
 import (
 	"context"
 	"errors"
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/common/hzlog"
 	"log/slog"
 	"sync/atomic"
 	"time"
+
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 )
 
 const (

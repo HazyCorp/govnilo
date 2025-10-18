@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	"github.com/HazyCorp/govnilo/common/statestore"
-	"github.com/HazyCorp/govnilo/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/pkg/common/statestore"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"

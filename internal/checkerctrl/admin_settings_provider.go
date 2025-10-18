@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
-	hazycheck2 "github.com/HazyCorp/govnilo/hazycheck"
+	hazycheck2 "github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/adminka/adminklient"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"

@@ -3,7 +3,7 @@ package checkerctrl
 import (
 	"context"
 
-	"github.com/HazyCorp/govnilo/common/checkersettings"
+	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 	"github.com/pkg/errors"
 
 	"go.uber.org/fx"
