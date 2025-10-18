@@ -48,3 +48,22 @@ cd _examples
 ## Development
 
 All binaries are built into `*/bin/` directories and these directories are ignored by git.
+
+There is a vscode run spec to debug the **_example** binary. 
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch example",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/_example/",
+            "program": "${workspaceFolder}/_example/cmd/main/",
+            "args": ["run", "--config", "./conf.yaml"]
+        }
+    ]
+}
+```
