@@ -49,7 +49,7 @@ Sploits run attacks against target services to test their resilience:
 - **State Management**: Handles cleanup of old/stale data
 - **Concurrent Safety**: Checkers must be safe for concurrent execution
 - **Error Handling**: Comprehensive error handling and context cancellation
-- **Trace ID Management**: Automatically generates and propagates trace IDs for debugging
+- **OpenTelemetry Tracing**: Automatically generates and propagates OpenTelemetry spans for debugging and observability
 
 ## Developer Experience
 
@@ -97,28 +97,108 @@ func init() {
 }
 ```
 
-### Trace ID Usage
+### OpenTelemetry Tracing Usage
 ```go
+import (
+    "github.com/HazyCorp/govnilo/pkg/govnilo"
+)
+
 func (c *MyChecker) Check(ctx context.Context, target string) ([]byte, error) {
-    // Trace ID is automatically included in logs via hzlog context
-    c.l.DebugContext(ctx, "Starting CHECK operation")
+    // Use govnilo.GetLogger to get a logger with automatic trace/span ID inclusion
+    logger := govnilo.GetLogger(ctx, c.l)
+    
+    // Trace ID and span ID are automatically included in logs via hzlog context
+    logger.DebugContext(ctx, "Starting CHECK operation")
     
     // Your checker logic here...
+    
+    logger.InfoContext(ctx, "Check operation completed")
+    
+    return data, nil
 }
 
 func (c *MyChecker) Get(ctx context.Context, target string, data []byte) error {
-    // Trace ID is automatically included in all context-aware log calls
-    c.l.DebugContext(ctx, "Starting GET operation")
-    c.l.InfoContext(ctx, "Processing data", slog.String("data_size", len(data)))
+    // Use govnilo.GetLogger to get a logger with automatic trace/span ID inclusion
+    logger := govnilo.GetLogger(ctx, c.l)
+    
+    // Trace ID and span ID are automatically included in all context-aware log calls
+    logger.DebugContext(ctx, "Starting GET operation")
+    logger.InfoContext(ctx, "Processing data", slog.String("data_size", len(data)))
+    
+    logger.InfoContext(ctx, "Data verification completed")
+    
     return nil
 }
+```
 
-// Optional: Retrieve trace ID for custom use
-func (c *MyChecker) SomeMethod(ctx context.Context) {
-    if traceID, ok := govnilo.GetTraceID(ctx); ok {
-        // Use trace ID for custom logic
-        fmt.Printf("Current trace: %s\n", traceID.String())
+## OpenTelemetry Integration
+
+Govnilo uses OpenTelemetry for distributed tracing and observability. The framework automatically creates spans for Check, Get, and RunAttack operations, and trace/span IDs are automatically included in all logs.
+
+### Automatic Span Creation
+
+The framework automatically creates OpenTelemetry spans for:
+- **Checker operations**: `checker.Check` and `checker.Get` 
+- **Sploit operations**: `sploit.RunAttack`
+
+### Logging with Trace Context
+
+Use `govnilo.GetLogger` to get a logger that automatically includes trace and span IDs:
+
+```go
+func (c *MyChecker) Check(ctx context.Context, target string) ([]byte, error) {
+    // Get logger with automatic trace/span ID inclusion
+    logger := govnilo.GetLogger(ctx, c.l)
+    
+    // All logs will automatically include trace_id and span_id
+    logger.InfoContext(ctx, "Starting check operation", 
+        slog.String("target", target))
+    
+    // Your checker logic here...
+    data, err := c.performCheck(target)
+    if err != nil {
+        logger.ErrorContext(ctx, "Check operation failed", 
+            slog.String("error", err.Error()))
+        return nil, err
     }
+    
+    logger.InfoContext(ctx, "Check operation completed", 
+        slog.Int("data_size", len(data)))
+    
+    return data, nil
+}
+```
+
+### Accessing Trace Context
+
+The recommended approach is to use `govnilo.GetLogger` which automatically includes trace and span IDs in all logs:
+
+```go
+func (c *MyChecker) SomeMethod(ctx context.Context) {
+    // Use govnilo.GetLogger for automatic trace/span ID inclusion
+    logger := govnilo.GetLogger(ctx, c.l)
+    
+    // All logs will automatically include trace_id and span_id
+    logger.InfoContext(ctx, "Processing with trace context")
+    
+    // If you need direct access to trace/span IDs, you can still use OpenTelemetry:
+    // import "go.opentelemetry.io/otel/trace"
+    // spanCtx := trace.SpanContextFromContext(ctx)
+    // traceID := spanCtx.TraceID().String()
+}
+```
+
+### Log Output
+
+With OpenTelemetry integration, your logs will include trace and span IDs:
+
+```json
+{
+  "level": "info",
+  "msg": "Check operation completed",
+  "trace_id": "28d17438dca4eeb82bdd1c98f2ac2b0a",
+  "span_id": "ad8eb41196eb9978",
+  "target": "example.com"
 }
 ```
 

@@ -1,6 +1,7 @@
 package fxbuild
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -14,7 +15,11 @@ import (
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
 	"github.com/HazyCorp/govnilo/internal/registrar"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -96,6 +101,21 @@ func GetConstructors() []interface{} {
 		os.Exit(1)
 	}
 
+	resource, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("govnilo"),
+		),
+	)
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
+
+	otel.SetTracerProvider(tp)
+
 	knownConstructors := append(
 		registrar.GetRegistered(),
 		// fxutil.AsIface[hazycheck.Provider](hazycheck.NewDummyProvider),
@@ -104,6 +124,13 @@ func GetConstructors() []interface{} {
 		func() configuration.Config {
 			logger.Info("starting with config", slog.Any("config", config))
 			return config
+		},
+		func(lc fx.Lifecycle) *sdktrace.TracerProvider {
+			lc.Append(fx.StopHook(func(ctx context.Context) {
+				_ = tp.Shutdown(ctx)
+			}))
+
+			return tp
 		},
 		NewGRPCServer,
 		NewSaveStrategy,

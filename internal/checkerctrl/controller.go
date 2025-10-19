@@ -14,6 +14,8 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/pkg/raterunner"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -170,13 +172,17 @@ func (c *Controller) genSploitRunAttackTask(
 
 	return func(ctx context.Context) error {
 		// Generate trace ID for debugging (automatically adds to hzlog context)
-		ctx = hzlog.WithNewTraceID(ctx)
+		tracer := otel.Tracer("govnilo/sploit")
+		ctx, span := tracer.Start(ctx, "sploit.RunAttack")
+		defer span.End()
 
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[sploitID.Service]
 		if serviceSettings == nil {
 			return errors.Errorf("cannot find service %s in current settings", sploitID.Service)
 		}
+
+		span.SetAttributes(attribute.String("target", serviceSettings.Target))
 
 		l := hzlog.GetLogger(ctx, l).With(slog.String("target", serviceSettings.Target))
 		start := time.Now()
@@ -219,13 +225,17 @@ func (c *Controller) genCheckerCheckTask(
 
 	return func(ctx context.Context) error {
 		// Generate trace ID for debugging (automatically adds to hzlog context)
-		ctx = hzlog.WithNewTraceID(ctx)
+		tracer := otel.Tracer("govnilo/checker")
+		ctx, span := tracer.Start(ctx, "checker.Check")
+		defer span.End()
 
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[checkerID.Service]
 		if serviceSettings == nil {
 			return errors.Errorf("cannot find service %s in current settings", checkerID.Service)
 		}
+
+		span.SetAttributes(attribute.String("target", serviceSettings.Target))
 
 		l := hzlog.GetLogger(ctx, l).With(
 			slog.String("target", serviceSettings.Target),
@@ -313,16 +323,19 @@ func (c *Controller) genCheckerGetTask(
 	checkerID := checker.CheckerID()
 	m := c.checkerMetricsFor(checkerID)
 	l := c.l.With(slog.Any("checker_id", checker.CheckerID()))
+	tracer := otel.Tracer("govnilo/checker")
 
 	return func(ctx context.Context) error {
-		// Generate trace ID for debugging (automatically adds to hzlog context)
-		ctx = hzlog.WithNewTraceID(ctx)
+		ctx, span := tracer.Start(ctx, "checker.Get")
+		defer span.End()
 
 		currentSettings := c.currentSettings.Load()
 		serviceSettings := currentSettings.Services[checkerID.Service]
 		if serviceSettings == nil {
 			return errors.Errorf("cannot find service %s in current settings", checkerID.Service)
 		}
+
+		span.SetAttributes(attribute.String("target", serviceSettings.Target))
 
 		l := hzlog.GetLogger(ctx, l).With(
 			slog.String("target", serviceSettings.Target),

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/go-slog/otelslog"
 	"github.com/pkg/errors"
 	slogzap "github.com/samber/slog-zap/v2"
 	"go.uber.org/zap"
@@ -154,8 +155,9 @@ func Build(c Config) (*slog.Logger, error) {
 	c.Filter.SkipInfra.onLevel = zapLevelToSlogLevel(infraSkipLevel)
 
 	ctxHandler := hzlogHandler{Handler: base, c: c}
+	otelHandler := otelslog.NewHandler(&ctxHandler)
 
-	l := slog.New(&ctxHandler)
+	l := slog.New(otelHandler)
 	slog.SetDefault(l)
 
 	return l, nil

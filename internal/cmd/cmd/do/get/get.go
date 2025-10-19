@@ -7,6 +7,8 @@ import (
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/util"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -22,8 +24,6 @@ var GetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "runs specified Checker.Get on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot build registered checkers")
@@ -32,6 +32,14 @@ var GetCmd = &cobra.Command{
 		target := globflags.Target
 		service := globflags.Service
 		checkerName := checkerName
+
+		ctx := cmd.Context()
+		tracer := otel.Tracer("govnilo/checker")
+		ctx, span := tracer.Start(ctx, "checker.Check")
+		defer span.End()
+
+		span.SetAttributes(attribute.String("service", service))
+		span.SetAttributes(attribute.String("target", target))
 
 		checkerID := hazycheck.CheckerID{
 			Service: service,

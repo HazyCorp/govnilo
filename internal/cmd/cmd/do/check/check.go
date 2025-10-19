@@ -7,7 +7,8 @@ import (
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/util"
-	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -20,16 +21,21 @@ var CheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "runs specified Checker.Check on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := hzlog.WithNewTraceID(cmd.Context())
-		// l := hzlog.MustBuild(hzlog.DefaultConfig())
-
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot extract checkers from command context")
 		}
 
+		ctx := cmd.Context()
+		tracer := otel.Tracer("govnilo/checker")
+		ctx, span := tracer.Start(ctx, "checker.Check")
+		defer span.End()
+
 		service := globflags.Service
 		target := globflags.Target
+
+		span.SetAttributes(attribute.String("service", service))
+		span.SetAttributes(attribute.String("target", target))
 
 		checkerID := hazycheck.CheckerID{
 			Service: service,

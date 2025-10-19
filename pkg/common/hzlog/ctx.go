@@ -3,6 +3,8 @@ package hzlog
 import (
 	"context"
 	"log/slog"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type attrsKey struct{}
@@ -19,6 +21,15 @@ func ContextWith(ctx context.Context, attrs ...slog.Attr) context.Context {
 
 func GetLogger(ctx context.Context, base *slog.Logger) *slog.Logger {
 	attrs := getAttrs(ctx)
+
+	spanContext := trace.SpanContextFromContext(ctx)
+	if spanContext.HasSpanID() {
+		attrs = append(attrs, slog.String("span_id", spanContext.SpanID().String()))
+	}
+	if spanContext.HasTraceID() {
+		attrs = append(attrs, slog.String("trace_id", spanContext.TraceID().String()))
+	}
+
 	if len(attrs) == 0 {
 		return base
 	}
