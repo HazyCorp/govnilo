@@ -2,6 +2,7 @@ package raterunner
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/HazyCorp/govnilo/internal/taskrunner"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/pkg/ratelimit"
+	"github.com/VictoriaMetrics/metrics"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -40,7 +42,7 @@ type taskSpec struct {
 	f    TaskFunc
 	name string
 
-	avgCounter       *AvgCounter
+	stat             Stat
 	runOptions       RunOptions
 	currentInstances uint64
 	rateLimitter     *ratelimit.Limiter
@@ -50,29 +52,29 @@ func (t *taskSpec) neededInstances() uint64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	avg, err := t.avgCounter.GetAvg()
+	stat, err := t.stat.GetStat()
 	if err != nil {
 		t.l.Debug(
-			"cannot correct instances of task: cannot get average of it's running time, using a default value",
+			"cannot correct instances of task: cannot get stat of it's running time, using a default value",
 			slog.Duration("value", time.Second),
 		)
-		avg = float64(time.Second)
+		stat = float64(time.Second)
 	}
 
-	avgDuration := time.Duration(int64(avg))
+	statisticalDuration := time.Duration(int64(stat))
 	t.l.Debug(
 		"task running stats",
-		slog.Duration("avg_duration", avgDuration),
+		slog.Duration("avg_duration", statisticalDuration),
 		slog.Uint64("needs", t.runOptions.Rate.Times),
 		slog.Duration("per", t.runOptions.Rate.Per),
 		slog.Int("max_goroutines", t.runOptions.MaxGoroutines),
 	)
 	instances := uint64(
-		float64(t.runOptions.Rate.Times) * float64(avgDuration) / float64(t.runOptions.Rate.Per),
+		float64(t.runOptions.Rate.Times) * float64(statisticalDuration) / float64(t.runOptions.Rate.Per),
 	)
 
 	// rate limitter will stop extra calls
-	instances = (instances + 1) * 2
+	instances = uint64(float64(instances)*1.2) + 1
 
 	// Return instances WITHOUT applying max_goroutines limit
 	return instances
@@ -129,6 +131,19 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 
 			// Get needed instances without limit
 			neededInstances := task.neededInstances()
+
+			metrics.GetOrCreateGauge(
+				fmt.Sprintf("checker_raterunner_needed_instances{task_name=%q}", taskName),
+				nil,
+			).Set(float64(neededInstances))
+			metrics.GetOrCreateGauge(
+				fmt.Sprintf("checker_raterunner_max_goroutines{task_name=%q}", taskName),
+				nil,
+			).Set(float64(task.runOptions.MaxGoroutines))
+			metrics.GetOrCreateGauge(
+				fmt.Sprintf("checker_raterunner_current_instances{task_name=%q}", taskName),
+				nil,
+			).Set(float64(task.currentInstances))
 
 			// Check if we need to warn about goroutine limit and apply max_goroutines limit if needed
 			if task.runOptions.MaxGoroutines > 0 && neededInstances > uint64(task.runOptions.MaxGoroutines) {
@@ -217,7 +232,7 @@ func (r *RateRunner) RegisterTaskWithOptions(taskName string, f TaskFunc, option
 		l:          r.l.With(slog.String("task_name", taskName)),
 		f:          f,
 		name:       taskName,
-		avgCounter: NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
+		stat:       NewPercentile(0.95, time.Minute),
 		runOptions: options,
 		rateLimitter: ratelimit.New(
 			ratelimit.Spec{Times: options.Rate.Times, Per: options.Rate.Per},
@@ -300,7 +315,7 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 			}
 
 			duration := time.Since(start)
-			t.avgCounter.Append(uint64(duration))
+			t.stat.Append(uint64(duration))
 		}
 	}
 }
