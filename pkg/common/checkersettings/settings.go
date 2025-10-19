@@ -17,33 +17,43 @@ import (
 //         check:
 //			 success_points: 1
 //           fail_penalty: 5
-//           rate:
-//             times: 500
-//             per: 1s
+//           run_options:
+//             rate:
+//             	 times: 500
+//               per: 1s
+//             max_goroutines: 100
 //         get:
 //			 success_points: 1
 //           fail_penalty: 10
-//           rate:
-//             times: 5
-//             per: 1s
+//           run_options:
+//             rate:
+//               times: 5
+//               per: 1s
+//             max_goroutines: 100
 //       user_with_big_payload:
 //         check:
 //			 success_points: 100
 //           fail_penalty: 50
-//           rate:
-//             times: 5
-//             per: 1m
-//          get:
-//			  success_points: 5000
-//            fail_penalty: 10000
-//            rate:
-//              times: 1
-//              per: 1h
+//           run_options:
+//             rate:
+//               times: 5
+//               per: 1m
+//             max_goroutines: 100
+//         get:
+//           success_points: 5000
+//           fail_penalty: 10000
+//           run_options:
+//             rate:
+//               times: 1
+//               per: 1h
+//             max_goroutines: 100
 //     sploits:
 //       drop_database_sql_injection:
-//         rate:
-//           times: 1
+//         run_options:
+//           rate:
+//             times: 1
 //             per: 1s
+//           max_goroutines: 100
 
 type Duration time.Duration
 
