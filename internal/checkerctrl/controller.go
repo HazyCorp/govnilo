@@ -508,22 +508,28 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 		}()
 
-		checkRate := raterunner.ZeroRate
-		getRate := raterunner.ZeroRate
+		var checkOptions raterunner.RunOptions
+		var getOptions raterunner.RunOptions
 		if checkerExists {
-			checkRate = raterunner.Rate{
-				Times: checkerDesc.Check.Rate.Times,
-				Per:   checkerDesc.Check.Rate.Per.AsDuration(),
+			checkOptions = raterunner.RunOptions{
+				Rate: raterunner.Rate{
+					Times: checkerDesc.Check.RunOptions.Rate.Times,
+					Per:   checkerDesc.Check.RunOptions.Rate.Per.AsDuration(),
+				},
+				MaxGoroutines: checkerDesc.Check.RunOptions.MaxGoroutines,
 			}
-			getRate = raterunner.Rate{
-				Times: checkerDesc.Get.Rate.Times,
-				Per:   checkerDesc.Get.Rate.Per.AsDuration(),
+			getOptions = raterunner.RunOptions{
+				Rate: raterunner.Rate{
+					Times: checkerDesc.Get.RunOptions.Rate.Times,
+					Per:   checkerDesc.Get.RunOptions.Rate.Per.AsDuration(),
+				},
+				MaxGoroutines: checkerDesc.Get.RunOptions.MaxGoroutines,
 			}
 		}
 
 		checkerTaskName := fmt.Sprintf("%s__%s__check", svcName, checkerName)
 		checkerTask := c.genCheckerCheckTask(checker)
-		if err := c.setTaskRate(checkerTaskName, checkerTask, checkRate); err != nil {
+		if err := c.setTaskRunOptions(checkerTaskName, checkerTask, checkOptions); err != nil {
 			errlist = multierror.Append(
 				errlist,
 				errors.Wrapf(err, "cannot set rate on check %q", checkerID),
@@ -533,7 +539,7 @@ func (c *Controller) syncState(ctx context.Context) error {
 
 		getterTaskName := fmt.Sprintf("%s__%s__get", svcName, checkerName)
 		getterTask := c.genCheckerGetTask(checker)
-		if err := c.setTaskRate(getterTaskName, getterTask, getRate); err != nil {
+		if err := c.setTaskRunOptions(getterTaskName, getterTask, getOptions); err != nil {
 			errlist = multierror.Append(
 				errlist,
 				errors.Wrapf(err, "cannot set rate on get %q", checkerID),
@@ -568,21 +574,21 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 		}()
 
-		sploitRate := raterunner.ZeroRate
+		var sploitOptions raterunner.RunOptions
 		if existingSploit {
-			sploitRate = raterunner.Rate{
-				Times: sploitDesc.Rate.Times,
-				Per:   sploitDesc.Rate.Per.AsDuration(),
+			sploitOptions = raterunner.RunOptions{
+				Rate: raterunner.Rate{
+					Times: sploitDesc.RunOptions.Rate.Times,
+					Per:   sploitDesc.RunOptions.Rate.Per.AsDuration(),
+				},
+				MaxGoroutines: sploitDesc.RunOptions.MaxGoroutines,
 			}
 		}
 
 		sploitTaskName := fmt.Sprintf("%s__%s__sploit", svcName, sploitName)
 		sploitTask := c.genSploitRunAttackTask(sploit)
-		if err := c.setTaskRate(sploitTaskName, sploitTask, sploitRate); err != nil {
-			errlist = multierror.Append(
-				errlist,
-				errors.Wrap(err, "cannot set task rate for sploit"),
-			)
+		if err := c.setTaskRunOptions(sploitTaskName, sploitTask, sploitOptions); err != nil {
+			errlist = multierror.Append(errlist, errors.Wrap(err, "cannot set task rate for sploit"))
 			continue
 		}
 	}
@@ -590,17 +596,23 @@ func (c *Controller) syncState(ctx context.Context) error {
 	return errlist.ErrorOrNil()
 }
 
-func (c *Controller) setTaskRate(taskName string, task raterunner.TaskFunc, rate raterunner.Rate) error {
+func (c *Controller) setTaskRunOptions(taskName string, task raterunner.TaskFunc, options raterunner.RunOptions) error {
 	if !c.rr.TaskRegistered(taskName) {
-		if err := c.rr.RegisterTask(taskName, task); err != nil {
+		if err := c.rr.RegisterTaskWithOptions(taskName, task, options); err != nil {
 			return errors.Wrapf(err, "cannot register task %q to rate runner", taskName)
 		}
+	} else {
+		// task is already registered, atomically update all options
+		if err := c.rr.SetTaskOptions(taskName, options); err != nil {
+			return errors.Wrapf(err, "cannot set task options for task %q", taskName)
+		}
+		return nil
 	}
 
-	// task is registered now
-	err := c.rr.SetTaskRate(taskName, rate)
+	// task is registered now, set the options
+	err := c.rr.SetTaskOptions(taskName, options)
 	if err != nil {
-		return errors.Wrapf(err, "cannot set task rate in rate runner for task %q", taskName)
+		return errors.Wrapf(err, "cannot set task options in rate runner for task %q", taskName)
 	}
 
 	return nil

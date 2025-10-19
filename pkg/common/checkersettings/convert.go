@@ -59,7 +59,10 @@ func pbToCheckerSettings(in *proto.ServiceSettings) *ServiceSettings {
 	sploits := make(map[string]*SploitSettings, len(in.GetSploits()))
 	for sploitName, sploit := range in.GetSploits() {
 		sploits[sploitName] = &SploitSettings{
-			Rate: pbToRate(sploit.Rate),
+			RunOptions: RunOptions{
+				Rate:          pbToRate(sploit.RunOptions.Rate),
+				MaxGoroutines: int(sploit.RunOptions.MaxGoroutines),
+			},
 		}
 	}
 
@@ -67,14 +70,20 @@ func pbToCheckerSettings(in *proto.ServiceSettings) *ServiceSettings {
 	for checkerName, checker := range in.GetCheckers() {
 		checkers[checkerName] = &CheckerSettings{
 			Check: CheckerCheckSettings{
-				SuccessPoints: checker.Check.GetSuccessPoints(),
-				FailPenalty:   checker.Check.GetFailPenalty(),
-				Rate:          pbToRate(checker.Check.Rate),
+				RunOptions: RunOptions{
+					Rate:          pbToRate(checker.Check.RunOptions.Rate),
+					MaxGoroutines: int(checker.Check.RunOptions.MaxGoroutines),
+				},
+				SuccessPoints: checker.Check.SuccessPoints,
+				FailPenalty:   checker.Check.FailPenalty,
 			},
 			Get: CheckerGetSettings{
-				SuccessPoints: checker.Get.GetSuccessPoints(),
-				FailPenalty:   checker.Get.GetFailPenalty(),
-				Rate:          pbToRate(checker.Get.Rate),
+				RunOptions: RunOptions{
+					Rate:          pbToRate(checker.Get.RunOptions.Rate),
+					MaxGoroutines: int(checker.Get.RunOptions.MaxGoroutines),
+				},
+				SuccessPoints: checker.Get.SuccessPoints,
+				FailPenalty:   checker.Get.FailPenalty,
 			},
 		}
 	}
@@ -92,7 +101,10 @@ func checkerSettingsToPB(in *ServiceSettings) *proto.ServiceSettings {
 	sploits := make(map[string]*proto.SploitSettings, len(in.Sploits))
 	for sploitName, sploit := range in.Sploits {
 		sploits[sploitName] = &proto.SploitSettings{
-			Rate: rateToPb(&sploit.Rate),
+			RunOptions: &proto.RunOptions{
+				Rate:          rateToPb(&sploit.RunOptions.Rate),
+				MaxGoroutines: int32(sploit.RunOptions.MaxGoroutines),
+			},
 		}
 	}
 
@@ -100,12 +112,18 @@ func checkerSettingsToPB(in *ServiceSettings) *proto.ServiceSettings {
 	for checkerName, checker := range in.Checkers {
 		checkers[checkerName] = &proto.CheckerSettings{
 			Check: &proto.CheckSettings{
-				Rate:          rateToPb(&checker.Check.Rate),
+				RunOptions: &proto.RunOptions{
+					Rate:          rateToPb(&checker.Check.RunOptions.Rate),
+					MaxGoroutines: int32(checker.Check.RunOptions.MaxGoroutines),
+				},
 				SuccessPoints: checker.Check.SuccessPoints,
 				FailPenalty:   checker.Check.FailPenalty,
 			},
 			Get: &proto.GetSettings{
-				Rate:          rateToPb(&checker.Get.Rate),
+				RunOptions: &proto.RunOptions{
+					Rate:          rateToPb(&checker.Get.RunOptions.Rate),
+					MaxGoroutines: int32(checker.Get.RunOptions.MaxGoroutines),
+				},
 				SuccessPoints: checker.Get.SuccessPoints,
 				FailPenalty:   checker.Get.FailPenalty,
 			},

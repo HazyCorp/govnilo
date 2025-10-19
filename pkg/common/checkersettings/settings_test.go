@@ -16,12 +16,16 @@ func TestNormalizeSimple(t *testing.T) {
 						Check: CheckerCheckSettings{
 							SuccessPoints: 100,
 							FailPenalty:   200,
-							Rate:          Rate{Times: 1, Per: Duration(time.Second)},
+							RunOptions: RunOptions{
+								Rate: Rate{Times: 1, Per: Duration(time.Second)},
+							},
 						},
 						Get: CheckerGetSettings{
 							SuccessPoints: 100,
 							FailPenalty:   200,
-							Rate:          Rate{Times: 1, Per: Duration(time.Second)},
+							RunOptions: RunOptions{
+								Rate: Rate{Times: 1, Per: Duration(time.Second)},
+							},
 						},
 					},
 				},
@@ -47,12 +51,16 @@ func TestNormalize_RateIsCounted(t *testing.T) {
 						Check: CheckerCheckSettings{
 							SuccessPoints: 100,
 							FailPenalty:   200,
-							Rate:          Rate{Times: 10, Per: Duration(time.Second)},
+							RunOptions: RunOptions{
+								Rate: Rate{Times: 10, Per: Duration(time.Second)},
+							},
 						},
 						Get: CheckerGetSettings{
 							SuccessPoints: 100,
 							FailPenalty:   200,
-							Rate:          Rate{Times: 1, Per: Duration(time.Second)},
+							RunOptions: RunOptions{
+								Rate: Rate{Times: 1, Per: Duration(time.Second)},
+							},
 						},
 					},
 				},
@@ -66,8 +74,8 @@ func TestNormalize_RateIsCounted(t *testing.T) {
 	getSettings := s.Get
 	checkSettings := s.Check
 
-	getPerSecond := float64(getSettings.Rate.Times) / getSettings.Rate.Per.AsDuration().Seconds()
-	checkPerSecond := float64(checkSettings.Rate.Times) / checkSettings.Rate.Per.AsDuration().Seconds()
+	getPerSecond := float64(getSettings.RunOptions.Rate.Times) / getSettings.RunOptions.Rate.Per.AsDuration().Seconds()
+	checkPerSecond := float64(checkSettings.RunOptions.Rate.Times) / checkSettings.RunOptions.Rate.Per.AsDuration().Seconds()
 
 	checkSuccessPerSecond := checkSettings.SuccessPoints * checkPerSecond
 	getSuccessPerSecond := getSettings.SuccessPoints * getPerSecond

@@ -28,6 +28,11 @@ type Rate struct {
 
 var ZeroRate = Rate{Times: 0, Per: time.Second}
 
+type RunOptions struct {
+	Rate          Rate
+	MaxGoroutines int
+}
+
 type taskSpec struct {
 	l  *slog.Logger
 	mu sync.Mutex
@@ -36,7 +41,7 @@ type taskSpec struct {
 	name string
 
 	avgCounter       *AvgCounter
-	targetRate       Rate
+	runOptions       RunOptions
 	currentInstances uint64
 	rateLimitter     *ratelimit.Limiter
 }
@@ -58,16 +63,18 @@ func (t *taskSpec) neededInstances() uint64 {
 	t.l.Debug(
 		"task running stats",
 		slog.Duration("avg_duration", avgDuration),
-		slog.Uint64("needs", t.targetRate.Times),
-		slog.Duration("per", t.targetRate.Per),
+		slog.Uint64("needs", t.runOptions.Rate.Times),
+		slog.Duration("per", t.runOptions.Rate.Per),
+		slog.Int("max_goroutines", t.runOptions.MaxGoroutines),
 	)
 	instances := uint64(
-		float64(t.targetRate.Times) * float64(avgDuration) / float64(t.targetRate.Per),
+		float64(t.runOptions.Rate.Times) * float64(avgDuration) / float64(t.runOptions.Rate.Per),
 	)
 
 	// rate limitter will stop extra calls
 	instances = (instances + 1) * 2
 
+	// Return instances WITHOUT applying max_goroutines limit
 	return instances
 }
 
@@ -120,28 +127,41 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 			l := r.l.With(slog.String("task_name", taskName))
 			l.Debug("checking task if it needs to adjust amount of replicas")
 
-			newInstances := task.neededInstances()
+			// Get needed instances without limit
+			neededInstances := task.neededInstances()
+
+			// Check if we need to warn about goroutine limit and apply max_goroutines limit if needed
+			if task.runOptions.MaxGoroutines > 0 && neededInstances > uint64(task.runOptions.MaxGoroutines) {
+				neededInstances = uint64(task.runOptions.MaxGoroutines)
+				l.Warn(
+					"needed instances exceed max_goroutines limit",
+					slog.Uint64("needed_instances", neededInstances),
+					slog.Int("max_goroutines", task.runOptions.MaxGoroutines),
+					slog.Uint64("limited_to", uint64(task.runOptions.MaxGoroutines)),
+				)
+			}
+
 			l.Debug(
 				"task calculated value",
 				slog.Uint64("current_instances", task.currentInstances),
-				slog.Uint64("calculated_instances", newInstances),
+				slog.Uint64("needed_instances", neededInstances),
 			)
 
 			func() {
 				task.mu.Lock()
 				defer task.mu.Unlock()
 
-				if newInstances == task.currentInstances {
+				if neededInstances == task.currentInstances {
 					l.Debug("don't need to update amount of instances")
 					return
 				}
 
-				if err := r.tr.UpdateTaskInstances(taskName, int(newInstances)); err != nil {
+				if err := r.tr.UpdateTaskInstances(taskName, int(neededInstances)); err != nil {
 					l.Warn("cannot update amount of instances", hzlog.Error(err))
 					return
 				}
 
-				task.currentInstances = newInstances
+				task.currentInstances = neededInstances
 			}()
 		}
 	}
@@ -177,7 +197,14 @@ func (r *RateRunner) TaskRegistered(taskName string) bool {
 }
 
 func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
-	r.l.Debug("registering task in rate runner", slog.String("task_name", taskName))
+	return r.RegisterTaskWithOptions(taskName, f, RunOptions{
+		Rate:          Rate{Times: 0, Per: time.Second},
+		MaxGoroutines: 0,
+	})
+}
+
+func (r *RateRunner) RegisterTaskWithOptions(taskName string, f TaskFunc, options RunOptions) error {
+	r.l.Debug("registering task in rate runner", slog.String("task_name", taskName), slog.Int("max_goroutines", options.MaxGoroutines))
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -191,9 +218,9 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 		f:          f,
 		name:       taskName,
 		avgCounter: NewAvgCounter(AvgCounterSpec{WindowSize: DefaultWindowSize}),
-		targetRate: Rate{Times: 0, Per: time.Second},
+		runOptions: options,
 		rateLimitter: ratelimit.New(
-			ratelimit.Spec{Times: 0, Per: time.Second},
+			ratelimit.Spec{Times: options.Rate.Times, Per: options.Rate.Per},
 			ratelimit.WithLogger(r.l.With(slog.String("task_name", taskName))),
 		),
 	}
@@ -208,8 +235,8 @@ func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
 	return nil
 }
 
-func (r *RateRunner) SetTaskRate(taskName string, rate Rate) error {
-	if rate.Per == 0 {
+func (r *RateRunner) SetTaskOptions(taskName string, options RunOptions) error {
+	if options.Rate.Per == 0 {
 		return errors.Errorf("rate.Per must be nonzero")
 	}
 
@@ -231,19 +258,21 @@ func (r *RateRunner) SetTaskRate(taskName string, rate Rate) error {
 		return err
 	}
 
+	// Set rate limiter spec
 	err = t.rateLimitter.SetSpec(ratelimit.Spec{
-		Times: rate.Times,
-		Per:   rate.Per,
+		Times: options.Rate.Times,
+		Per:   options.Rate.Per,
 	})
 	if err != nil {
 		return errors.Wrap(err, "cannot set task rate")
 	}
 
+	// Atomically update run options
 	func() {
 		t.mu.Lock()
 		defer t.mu.Unlock()
 
-		t.targetRate = rate
+		t.runOptions = options
 	}()
 
 	return nil
@@ -253,7 +282,7 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 	return func(ctx context.Context) error {
 		// to distribute load more uniformly let's sleep random amount of time in the beginning (jitter)
 		// TODO: remove: ratelimitter should shape the load
-		toSleep := time.Duration(uint64(rand.Float64() * float64(t.targetRate.Per)))
+		toSleep := time.Duration(uint64(rand.Float64() * float64(t.runOptions.Rate.Per)))
 		if err := r.waitFor(ctx, toSleep); err != nil {
 			return err
 		}
