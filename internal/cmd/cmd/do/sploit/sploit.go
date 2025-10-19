@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/HazyCorp/govnilo/internal/cmd/globflags"
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
@@ -19,8 +21,6 @@ var SploitCmd = &cobra.Command{
 	Use:   "sploit",
 	Short: "runs specified Sploit.RunAttack on your service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-
 		checkers, err := cmdutil.ExtractSploits(false)
 		if err != nil {
 			return errors.Wrap(err, "cannot build registered sploits")
@@ -29,6 +29,14 @@ var SploitCmd = &cobra.Command{
 		target := globflags.Target
 		service := globflags.Service
 		sploitName := sploitName
+
+		ctx := cmd.Context()
+		tracer := otel.Tracer("govnilo/sploit")
+		ctx, span := tracer.Start(ctx, "sploit.RunAttack")
+		defer span.End()
+
+		span.SetAttributes(attribute.String("service", service))
+		span.SetAttributes(attribute.String("target", target))
 
 		sploitID := hazycheck.SploitID{
 			Service: service,

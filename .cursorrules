@@ -79,9 +79,9 @@ func init() {
 - Use proper error handling and context cancellation
 - Follow the registration pattern in init() functions
 
-## Trace ID for Debugging
-- Each Check, Get, and RunAttack operation gets a unique trace ID
-- Trace IDs are automatically included in all logs via hzlog context
-- Use `logger.DebugContext(ctx, "message")` for automatic trace ID inclusion
-- Use `govnilo.GetTraceID(ctx)` to retrieve the trace ID if needed
-- Trace ID generation and hzlog context integration is handled by the infrastructure
+## OpenTelemetry Tracing for Debugging
+- Each Check, Get, and RunAttack operation gets a unique OpenTelemetry span
+- Trace IDs and span IDs are automatically included in all logs via hzlog context
+- Use `logger.DebugContext(ctx, "message")` for automatic trace/span ID inclusion
+- OpenTelemetry spans are created using `otel.Tracer("service-name")` in the infrastructure
+- Trace and span context is automatically propagated through the call chain
