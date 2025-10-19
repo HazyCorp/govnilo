@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/HazyCorp/hzc/proto";
+option go_package = "github.com/HazyCorp/govnilo/proto";
 
 import "google/protobuf/duration.proto";
 
@@ -47,18 +47,23 @@ message CheckerSettings {
     GetSettings get = 2;
 }
 
-message CheckSettings {
+message RunOptions {
     Rate rate = 1;
+    int32 max_goroutines = 2;
+}
+
+message CheckSettings {
+    RunOptions run_options = 1;
     double success_points = 2;
     double fail_penalty = 3;
 }
 
 message GetSettings {
-    Rate rate = 1;
+    RunOptions run_options = 1;
     double success_points = 2;
     double fail_penalty = 3;
 }
 
 message SploitSettings {
-    Rate rate = 1;
+    RunOptions run_options = 1;
 }

@@ -95,8 +95,13 @@ type Rate struct {
 	Per   Duration `json:"per" yaml:"per"`
 }
 
+type RunOptions struct {
+	Rate          Rate `json:"rate" yaml:"rate"`
+	MaxGoroutines int  `json:"max_goroutines" yaml:"max_goroutines"`
+}
+
 type SploitSettings struct {
-	Rate Rate `json:"rate" yaml:"rate"`
+	RunOptions RunOptions `json:"run_options" yaml:"run_options"`
 }
 
 type CheckerSettings struct {
@@ -105,15 +110,15 @@ type CheckerSettings struct {
 }
 
 type CheckerGetSettings struct {
-	SuccessPoints float64 `json:"success_points" yaml:"success_points"`
-	FailPenalty   float64 `json:"fail_penalty" yaml:"fail_penalty"`
-	Rate          Rate    `json:"rate" yaml:"rate"`
+	RunOptions    RunOptions `json:"run_options" yaml:"run_options"`
+	SuccessPoints float64    `json:"success_points" yaml:"success_points"`
+	FailPenalty   float64    `json:"fail_penalty" yaml:"fail_penalty"`
 }
 
 type CheckerCheckSettings struct {
-	SuccessPoints float64 `json:"success_points" yaml:"success_points"`
-	FailPenalty   float64 `json:"fail_penalty" yaml:"fail_penalty"`
-	Rate          Rate    `json:"rate" yaml:"rate"`
+	RunOptions    RunOptions `json:"run_options" yaml:"run_options"`
+	SuccessPoints float64    `json:"success_points" yaml:"success_points"`
+	FailPenalty   float64    `json:"fail_penalty" yaml:"fail_penalty"`
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,11 +189,11 @@ func (s *ServiceSettings) normalizePointsInService(targetSum float64) {
 	var penaltySum float64 = 0
 
 	for _, checkerSettings := range s.Checkers {
-		checksPerSecond := float64(checkerSettings.Check.Rate.Times) / checkerSettings.Check.Rate.Per.AsDuration().Seconds()
+		checksPerSecond := float64(checkerSettings.Check.RunOptions.Rate.Times) / checkerSettings.Check.RunOptions.Rate.Per.AsDuration().Seconds()
 		pointsSum += checkerSettings.Check.SuccessPoints * checksPerSecond
 		penaltySum += checkerSettings.Check.FailPenalty * checksPerSecond
 
-		getsPerSecond := float64(checkerSettings.Get.Rate.Times) / checkerSettings.Get.Rate.Per.AsDuration().Seconds()
+		getsPerSecond := float64(checkerSettings.Get.RunOptions.Rate.Times) / checkerSettings.Get.RunOptions.Rate.Per.AsDuration().Seconds()
 		pointsSum += checkerSettings.Get.SuccessPoints * getsPerSecond
 		penaltySum += checkerSettings.Get.FailPenalty * getsPerSecond
 	}
