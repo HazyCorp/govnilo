@@ -20,7 +20,7 @@ services:
     sploits:
       example_attack:
         rate:
-          times: 1
+          times: 0
           per: 1s
     checkers:
       sleeper:
@@ -28,7 +28,7 @@ services:
           success_points: 1
           fail_penalty: 1
           rate:
-            times: 1
+            times: 0
             per: 1s
         get:
           # get check is empty, we don't need to run it

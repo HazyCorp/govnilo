@@ -27,6 +27,6 @@ logging:
   mode: json
   level: debug
   filter:
-    skip_infra:
+    infra:
       enabled: true
-      on_level: info
+      level: info
