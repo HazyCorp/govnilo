@@ -58,25 +58,29 @@ func (h *hzlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	attrs := getAttrs(ctx)
 
 	isInfraLog := h.hasInfraComponent
-	if h.c.Filter.SkipInfra.Enabled {
-		r.Attrs(func(attr slog.Attr) bool {
-			if isInfraComponentAttr(attr) {
-				// if infra log, then skip
-				isInfraLog = true
-				return false
-			}
-
-			return true
-		})
-
-		if slices.ContainsFunc(attrs, isInfraComponentAttr) {
+	r.Attrs(func(attr slog.Attr) bool {
+		if isInfraComponentAttr(attr) {
+			// if infra log, then skip
 			isInfraLog = true
+			return false
 		}
+
+		return true
+	})
+
+	if slices.ContainsFunc(attrs, isInfraComponentAttr) {
+		isInfraLog = true
 	}
 
-	if isInfraLog && h.c.Filter.SkipInfra.Enabled {
+	if isInfraLog {
+		if !h.c.Filter.Infra.Enabled {
+			// log belongs to infra, but infra logging is disabled, skip
+			return nil
+		}
+
+		// log belongs to infra, and infra logging is enabled, check the level
 		// skip infra log, but we need to check the level first
-		if r.Level < h.c.Filter.SkipInfra.onLevel {
+		if r.Level < h.c.Filter.Infra.level {
 			// too low level to log infra log, skip
 			return nil
 		}
@@ -89,10 +93,6 @@ func (h *hzlogHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func (h *hzlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	nextHandler := h.Handler.WithAttrs(attrs)
-
-	if !h.c.Filter.SkipInfra.Enabled {
-		return &hzlogHandler{Handler: nextHandler, hasInfraComponent: h.hasInfraComponent}
-	}
 
 	component, componentFound := getComponent(attrs)
 	if !componentFound {
@@ -148,14 +148,14 @@ func Build(c Config) (*slog.Logger, error) {
 	slogLvl := zapLevelToSlogLevel(lvl)
 	base := slogzap.Option{Level: slogLvl, Logger: zapLogger}.NewZapHandler()
 
-	infraSkipLevel, err := zapcore.ParseLevel(c.Filter.SkipInfra.OnLevel)
+	infraLogLevel, err := zapcore.ParseLevel(c.Filter.Infra.Level)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot parse skip_infra.on_level %s", c.Filter.SkipInfra.OnLevel)
+		return nil, errors.Wrapf(err, "cannot parse infra.level %s", c.Filter.Infra.Level)
 	}
-	c.Filter.SkipInfra.onLevel = zapLevelToSlogLevel(infraSkipLevel)
+	c.Filter.Infra.level = zapLevelToSlogLevel(infraLogLevel)
 
-	ctxHandler := hzlogHandler{Handler: base, c: c}
-	otelHandler := otelslog.NewHandler(&ctxHandler)
+	ctxHandler := newHzlogHandler(c, base)
+	otelHandler := otelslog.NewHandler(ctxHandler)
 
 	l := slog.New(otelHandler)
 	slog.SetDefault(l)
