@@ -5,7 +5,7 @@ services:
       example_attack:
         run_options:
           rate:
-            times: 200
+            times: 1
             per: 1s
           max_goroutines: 100
     checkers:

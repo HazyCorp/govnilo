@@ -36,7 +36,7 @@ func NewSleeperChecker(l *slog.Logger) *SleeperChecker {
 func (c *SleeperChecker) Check(ctx context.Context, target string) ([]byte, error) {
 	// Trace ID is automatically included in logs via hzlog context
 	l := govnilo.GetLogger(ctx, c.l)
-	l.Debug("Starting CHECK operation")
+	l.DebugContext(ctx, "Starting CHECK operation")
 
 	url := fmt.Sprintf("http://%s/operations/heavy", target)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -59,7 +59,7 @@ func (c *SleeperChecker) Check(ctx context.Context, target string) ([]byte, erro
 func (c *SleeperChecker) Get(ctx context.Context, target string, data []byte) error {
 	// Trace ID is automatically included in logs via hzlog context
 	l := govnilo.GetLogger(ctx, c.l)
-	l.Debug("Starting GET operation")
+	l.DebugContext(ctx, "Starting GET operation")
 
 	// always success. we don't need to check any consistency here
 	return nil

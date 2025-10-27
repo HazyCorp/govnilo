@@ -16,6 +16,23 @@ import (
 // will be fullfilled by the infrastructure. You can, for example, ask *slog.Logger to be provided to your constructor.
 func RegisterSploit(constructor any) {
 	constr := reflect.ValueOf(constructor)
+	constrType := constr.Type()
+
+	if constrType.Kind() != reflect.Func {
+		panic("not func provided to register")
+	}
+
+	if constrType.NumOut() != 1 {
+		panic("func returns not just sploit in a single return value")
+	}
+
+	retType := constrType.Out(0)
+	if !retType.Implements(reflect.TypeOf((*Sploit)(nil)).Elem()) {
+		panic("func returns not sploit")
+	}
+
+	sploitID := reflect.New(retType).Elem().Interface().(Sploit).SploitID()
+
 	newConstr := reflect.MakeFunc(constr.Type(), func(args []reflect.Value) []reflect.Value {
 		newVals := make([]reflect.Value, 0, len(args))
 		for _, val := range args {
@@ -23,7 +40,10 @@ func RegisterSploit(constructor any) {
 
 			if t == reflect.TypeOf((*slog.Logger)(nil)) {
 				l := val.Interface().(*slog.Logger)
-				l = l.With(slog.String("component", "business:sploit"))
+				l = l.With(
+					slog.String("component", "business:sploit"),
+					slog.Any("sploit_id", sploitID),
+				)
 
 				val = reflect.ValueOf(l)
 			}

@@ -15,14 +15,34 @@ import (
 // If you need to register some dependencies for your checker, use registrar.RegisterChecker
 func RegisterChecker(constructor any) {
 	constr := reflect.ValueOf(constructor)
-	newConstr := reflect.MakeFunc(constr.Type(), func(args []reflect.Value) []reflect.Value {
+	constrType := constr.Type()
+
+	if constrType.Kind() != reflect.Func {
+		panic("not func provided to register")
+	}
+
+	if constrType.NumOut() != 1 {
+		panic("func returns not just checker in a single return value")
+	}
+
+	retType := constrType.Out(0)
+	if !retType.Implements(reflect.TypeOf((*Checker)(nil)).Elem()) {
+		panic("func returns not checker")
+	}
+
+	checkerID := reflect.New(retType).Elem().Interface().(Checker).CheckerID()
+
+	newConstr := reflect.MakeFunc(constrType, func(args []reflect.Value) []reflect.Value {
 		newVals := make([]reflect.Value, 0, len(args))
 		for _, val := range args {
 			t := val.Type()
 
 			if t == reflect.TypeOf((*slog.Logger)(nil)) {
 				l := val.Interface().(*slog.Logger)
-				l = l.With(slog.String("component", "business:checker"))
+				l = l.With(
+					slog.String("component", "business:checker"),
+					slog.Any("checker_id", checkerID),
+				)
 
 				val = reflect.ValueOf(l)
 			}
