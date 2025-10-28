@@ -2,8 +2,6 @@ package usercreate
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -11,6 +9,7 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/govnilo"
 
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 func init() {
@@ -22,14 +21,16 @@ var _ govnilo.Checker = &SleeperChecker{}
 type SleeperChecker struct {
 	l *slog.Logger
 	c *http.Client
+	r *redis.Client
 }
 
-func NewSleeperChecker(l *slog.Logger) *SleeperChecker {
+func NewSleeperChecker(l *slog.Logger, r *redis.Client) *SleeperChecker {
 	return &SleeperChecker{
 		l: l,
 		c: &http.Client{
 			Timeout: time.Millisecond * 500,
 		},
+		r: r,
 	}
 }
 
@@ -38,20 +39,12 @@ func (c *SleeperChecker) Check(ctx context.Context, target string) ([]byte, erro
 	l := govnilo.GetLogger(ctx, c.l)
 	l.DebugContext(ctx, "Starting CHECK operation")
 
-	url := fmt.Sprintf("http://%s/operations/heavy", target)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	t := time.Now().String()
+	err := c.r.Set(ctx, "sleeper-check", t, redis.KeepTTL).Err()
 	if err != nil {
-		return nil, govnilo.InternalError(errors.Wrap(err, "cannot build the request"))
+		return nil, errors.Wrap(err, "cannot set redis key")
 	}
-
-	rsp, err := c.c.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get response")
-	}
-	defer func() {
-		io.Copy(io.Discard, rsp.Body)
-		rsp.Body.Close()
-	}()
+	l.DebugContext(ctx, "successfully set redis key", slog.String("key", "sleeper-check"), slog.String("value", t))
 
 	return nil, nil
 }
@@ -61,7 +54,16 @@ func (c *SleeperChecker) Get(ctx context.Context, target string, data []byte) er
 	l := govnilo.GetLogger(ctx, c.l)
 	l.DebugContext(ctx, "Starting GET operation")
 
-	// always success. we don't need to check any consistency here
+	// Check if the key exists in Redis
+	result, err := c.r.Get(ctx, "sleeper-check").Result()
+	if err != nil {
+		if err == redis.Nil {
+			return errors.New("sleeper-check key not found in Redis")
+		}
+		return errors.Wrap(err, "cannot get redis key")
+	}
+
+	l.DebugContext(ctx, "successfully verified sleeper-check key exists", slog.String("result", result))
 	return nil
 }
 

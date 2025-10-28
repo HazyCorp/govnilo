@@ -132,6 +132,7 @@ func GetConstructors() []interface{} {
 
 			return tp
 		},
+		NewRedisClient,
 		NewGRPCServer,
 		NewSaveStrategy,
 		checkerctrl.NewFX,

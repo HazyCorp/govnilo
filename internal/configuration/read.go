@@ -23,6 +23,7 @@ type Config struct {
 	Controller       checkerctrl.Config                 `json:"controller" yaml:"controller"`
 	Metrics          metricsrv.Config                   `json:"metrics" yaml:"metrics"`
 	SettingsProvider checkerctrl.SettingsProviderConfig `json:"settings_provider" yaml:"settings_provider"`
+	Redis            Redis                              `json:"redis" yaml:"redis"`
 }
 
 func defaultConfig() *Config {
@@ -46,6 +47,10 @@ func defaultConfig() *Config {
 			},
 		},
 		Logging: hzlog.DefaultConfig(),
+		Redis: Redis{
+			Host: "localhost",
+			Port: 6379,
+		},
 	}
 }
 
@@ -94,6 +99,10 @@ func Validate(c *Config) error {
 	}
 	if c.SettingsProvider.FromAdmin != nil && c.SettingsProvider.FromFile != nil {
 		return errors.Errorf("only one settings provider must be chosen")
+	}
+
+	if c.Redis.Validate() != nil {
+		return errors.Wrap(c.Redis.Validate(), "invalid redis config")
 	}
 
 	return nil
