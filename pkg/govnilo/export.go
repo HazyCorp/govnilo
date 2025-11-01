@@ -18,8 +18,9 @@ type (
 var (
 	Execute = cmd.Execute
 
-	RegisterChecker = hazycheck.RegisterChecker
-	RegisterSploit  = hazycheck.RegisterSploit
+	RegisterChecker     = hazycheck.RegisterChecker
+	RegisterSploit      = hazycheck.RegisterSploit
+	RegisterConstructor = hazycheck.RegisterConstructor
 
 	InternalError = hazycheck.InternalError
 
