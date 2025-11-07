@@ -10,6 +10,12 @@ import (
 	"go.uber.org/fx"
 )
 
+var registeredCheckers []CheckerID
+
+func GetRegistered() []CheckerID {
+	return registeredCheckers
+}
+
 // RegisterChecker registers constructor of the checker with needed annotations.
 // If you need to register checker, use THIS function.
 // If you need to register some dependencies for your checker, use registrar.RegisterChecker
@@ -31,6 +37,7 @@ func RegisterChecker(constructor any) {
 	}
 
 	checkerID := reflect.New(retType).Elem().Interface().(Checker).CheckerID()
+	registeredCheckers = append(registeredCheckers, checkerID)
 
 	newConstr := reflect.MakeFunc(constrType, func(args []reflect.Value) []reflect.Value {
 		newVals := make([]reflect.Value, 0, len(args))
@@ -101,12 +108,9 @@ type Checker interface {
 	// If you have multiple flows to check, you need to run these checks concurrently and wait untill their end.
 	// You may use sync.WaitGroup to achieve that result, or event errgroup.Group, if you want to.
 	// The context contains a trace ID for debugging: use govnilo.GetTraceID(ctx) to retrieve it.
-	Check(ctx context.Context, target string) ([]byte, error)
-	// Get must verify, that data, created in Check is still exists in service. In other words: Get checks service's
-	// consistency over time.
-	// The context contains a trace ID for debugging: use govnilo.GetTraceID(ctx) to retrieve it.
-	Get(ctx context.Context, target string, data []byte) error
+	Check(ctx context.Context, target string) error
 
 	// CheckerID returns the id of the checker. This method is used for internal checker registration.
+	// This method MUST work with nil receiver.
 	CheckerID() CheckerID
 }

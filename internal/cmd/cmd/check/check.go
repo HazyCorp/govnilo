@@ -7,19 +7,30 @@ import (
 	"github.com/HazyCorp/govnilo/internal/cmdutil"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/util"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-var checkerName string
+func init() {
+	CheckCmd.PersistentFlags().
+		StringVarP(&globflags.Service, "service", "s", "", "specifies service name to run checks on")
+	CheckCmd.MarkPersistentFlagRequired("service")
+
+	CheckCmd.PersistentFlags().
+		StringVarP(&globflags.CheckerName, "checker", "c", "", "specifies checker name to run")
+	CheckCmd.MarkPersistentFlagRequired("checker")
+
+	CheckCmd.PersistentFlags().
+		StringVarP(&globflags.Target, "target", "t", "", "specifies target, which will be provided to Checker methods")
+	CheckCmd.MarkPersistentFlagRequired("target")
+}
 
 var CheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "runs specified Checker.Check on your service",
+	Short: "runs single check using the provided target",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		checkers, err := cmdutil.ExtractCheckers(false)
 		if err != nil {
@@ -39,7 +50,7 @@ var CheckCmd = &cobra.Command{
 
 		checkerID := hazycheck.CheckerID{
 			Service: service,
-			Name:    checkerName,
+			Name:    globflags.CheckerName,
 		}
 
 		checker, exists := lo.Find(checkers, func(item hazycheck.Checker) bool {
@@ -50,26 +61,19 @@ var CheckCmd = &cobra.Command{
 		}
 
 		start := time.Now()
-		data, err := checker.Check(ctx, target)
-		if err != nil {
+		if err := checker.Check(ctx, target); err != nil {
 			return err
 		}
 		duration := time.Since(start)
 
 		output := map[string]any{
 			"service":  service,
-			"checker":  checkerName,
+			"checker":  globflags.CheckerName,
 			"target":   target,
-			"method":   "Checker.Check",
 			"duration": duration.String(),
-			"output":   string(data),
 		}
 		util.PrintJson(output)
+
 		return nil
 	},
-}
-
-func init() {
-	CheckCmd.Flags().StringVarP(&checkerName, "checker", "c", "", "specifies the checker name to be run")
-	CheckCmd.MarkFlagRequired("checker")
 }

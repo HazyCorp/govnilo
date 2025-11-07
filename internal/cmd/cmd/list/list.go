@@ -1,17 +1,27 @@
 package list
 
 import (
-	"github.com/HazyCorp/govnilo/internal/cmd/cmd/list/checkers"
-	"github.com/HazyCorp/govnilo/internal/cmd/cmd/list/sploits"
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/util"
 	"github.com/spf13/cobra"
 )
 
-var ListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "lists registered entities (sploits and checkers at this moment)",
-}
+var ListCheckersCmd = &cobra.Command{
+	Use:   "list-checkers",
+	Short: "lists all registered checkers",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		checkerIDs := hazycheck.GetRegistered()
 
-func init() {
-	ListCmd.AddCommand(checkers.ListCheckersCmd)
-	ListCmd.AddCommand(sploits.ListSploitsCmd)
+		serviceCheckers := make(map[string][]string)
+		for _, checkerID := range checkerIDs {
+
+			service := checkerID.Service
+			checkerName := checkerID.Name
+
+			serviceCheckers[service] = append(serviceCheckers[service], checkerName)
+		}
+
+		util.PrintJson(serviceCheckers)
+		return nil
+	},
 }

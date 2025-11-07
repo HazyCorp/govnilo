@@ -16,7 +16,6 @@ type FileSettingsProviderIn struct {
 	fx.In
 
 	Checkers []hazycheck.Checker `group:"checkers"`
-	Sploits  []hazycheck.Sploit  `group:"sploits"`
 	Config   *FileSettingsProviderConfig
 }
 
@@ -29,7 +28,6 @@ var _ SettingsProvider = &FileSettingsProvider{}
 type FileSettingsProvider struct {
 	c        *FileSettingsProviderConfig
 	checkers map[hazycheck.CheckerID]hazycheck.Checker
-	sploits  map[hazycheck.SploitID]hazycheck.Sploit
 }
 
 func NewFileSettingsProvider(in FileSettingsProviderIn) *FileSettingsProvider {
@@ -38,14 +36,8 @@ func NewFileSettingsProvider(in FileSettingsProviderIn) *FileSettingsProvider {
 		checkers[c.CheckerID()] = c
 	}
 
-	sploits := make(map[hazycheck.SploitID]hazycheck.Sploit)
-	for _, s := range in.Sploits {
-		sploits[s.SploitID()] = s
-	}
-
 	return &FileSettingsProvider{
 		checkers: checkers,
-		sploits:  sploits,
 		c:        in.Config,
 	}
 }

@@ -61,31 +61,3 @@ func ExtractCheckers(enableFXLogs bool) ([]hazycheck.Checker, error) {
 
 	return registeredCheckers, nil
 }
-
-func ExtractSploits(enableFXLogs bool) ([]hazycheck.Sploit, error) {
-	fxOpts := []fx.Option{
-		fx.Provide(
-			fxbuild.GetConstructors()...,
-		),
-		buildFXLogger(enableFXLogs),
-	}
-
-	type sploitsIn struct {
-		fx.In
-
-		Sploits []hazycheck.Sploit `group:"sploits"`
-	}
-
-	var registeredSploits []hazycheck.Sploit
-	fxOpts = append(fxOpts, fx.Invoke(func(in sploitsIn) {
-		registeredSploits = in.Sploits
-	}))
-
-	app := fx.New(fxOpts...)
-	if err := app.Start(context.Background()); err != nil {
-		return nil, errors.Wrap(err, "cannot build the app to extract the sploits")
-	}
-	_ = app.Stop(context.Background())
-
-	return registeredSploits, nil
-}

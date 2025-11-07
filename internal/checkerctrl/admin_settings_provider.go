@@ -20,7 +20,6 @@ type AdminSettingsProviderIn struct {
 	fx.In
 
 	Checkers []hazycheck.Checker `group:"checkers"`
-	Sploits  []hazycheck.Sploit  `group:"sploits"`
 	Logger   *slog.Logger
 	Config   *AdminSettingsProviderConfig
 }
@@ -31,7 +30,6 @@ type AdminSettingsProvider struct {
 	client   adminklient.Client
 	l        *slog.Logger
 	checkers map[hazycheck.CheckerID]hazycheck.Checker
-	sploits  map[hazycheck.SploitID]hazycheck.Sploit
 }
 
 func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvider, error) {
@@ -45,16 +43,10 @@ func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvide
 		checkers[c.CheckerID()] = c
 	}
 
-	sploits := make(map[hazycheck.SploitID]hazycheck.Sploit)
-	for _, s := range in.Sploits {
-		sploits[s.SploitID()] = s
-	}
-
 	return &AdminSettingsProvider{
 		client:   client,
 		l:        in.Logger.With(slog.String("component", "infra:adminka_settings_provider")),
 		checkers: checkers,
-		sploits:  sploits,
 	}, nil
 }
 

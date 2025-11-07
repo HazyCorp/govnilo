@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/HazyCorp/govnilo/internal/cmd/cmd/do"
+	"github.com/HazyCorp/govnilo/internal/cmd/cmd/check"
 	"github.com/HazyCorp/govnilo/internal/cmd/cmd/list"
 	"github.com/HazyCorp/govnilo/internal/cmd/cmd/run"
 	"github.com/HazyCorp/govnilo/internal/util"
@@ -50,7 +50,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(do.DoCmd)
-	rootCmd.AddCommand(list.ListCmd)
+	rootCmd.AddCommand(check.CheckCmd)
+	rootCmd.AddCommand(list.ListCheckersCmd)
 	rootCmd.AddCommand(run.RunCmd)
 }

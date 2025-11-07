@@ -14,75 +14,11 @@ type checkerMetrics struct {
 	FailCheckCounter    *metrics.Counter
 	FailCheckPenalty    *metrics.FloatCounter
 
-	SuccessGetCounter *metrics.Counter
-	SuccessGetPoints  *metrics.FloatCounter
-	FailGetCounter    *metrics.Counter
-	FailGetPenalty    *metrics.FloatCounter
-
 	CheckInternalErrorsTotal    *metrics.Counter
-	GetInternalErrorsTotal      *metrics.Counter
 	CheckInternalErrorsDuration *metrics.Histogram
-	GetInternalErrorsDuration   *metrics.Histogram
 
 	SuccessCheckDuration *metrics.Histogram
 	FailCheckDuration    *metrics.Histogram
-
-	SuccessGetDuration *metrics.Histogram
-	FailGetDuration    *metrics.Histogram
-}
-
-type sploitMetrics struct {
-	SuccessCounter *metrics.Counter
-	FailCounter    *metrics.Counter
-
-	SuccessDuration *metrics.Histogram
-	FailDuration    *metrics.Histogram
-}
-
-func (c *Controller) sploitMetricsFor(sploitID hazycheck2.SploitID) *sploitMetrics {
-	// hot path, metrics are already registered, need only to return them
-	// multiple goroutines may try to get metrics, so read lock is used
-	c.sploitMetricsMu.RLock()
-	m, exists := c.sploitMetrics[sploitID]
-	if exists {
-		c.sploitMetricsMu.RUnlock()
-		return m
-	}
-
-	c.sploitMetricsMu.RUnlock()
-
-	// metrics are not registered, need to register and save them
-	// need to write to map, so we need exclusive lock
-	c.sploitMetricsMu.Lock()
-	defer c.sploitMetricsMu.Unlock()
-
-	// multiple goroutines may be here, so need to check are metrics registered by another
-	// gorutine earlier
-	m, exists = c.sploitMetrics[sploitID]
-	if exists {
-		return m
-	}
-
-	template := `%s{status=%q, service=%q, sploit=%q}`
-	m = &sploitMetrics{
-		SuccessCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "sploit_runs_total", "success", sploitID.Service, sploitID.Name),
-		),
-		FailCounter: metrics.NewCounter(
-			fmt.Sprintf(template, "sploit_runs_total", "fail", sploitID.Service, sploitID.Name),
-		),
-
-		SuccessDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "sploit_duration", "success", sploitID.Service, sploitID.Name),
-		),
-		FailDuration: metrics.NewHistogram(
-			fmt.Sprintf(template, "sploit_duration", "fail", sploitID.Service, sploitID.Name),
-		),
-	}
-
-	c.sploitMetrics[sploitID] = m
-
-	return m
 }
 
 // TODO: remove syncronization, all services are known at the compile time,
@@ -127,21 +63,11 @@ func (c *Controller) checkerMetricsFor(checkerID hazycheck2.CheckerID) *checkerM
 		FailCheckCounter:    metrics.NewCounter(genMetricName("checker_runs_total", "fail", "check")),
 		FailCheckPenalty:    metrics.NewFloatCounter(genMetricName("checker_points", "fail", "check")),
 
-		SuccessGetCounter: metrics.NewCounter(genMetricName("checker_runs_total", "success", "get")),
-		SuccessGetPoints:  metrics.NewFloatCounter(genMetricName("checker_points", "success", "get")),
-		FailGetCounter:    metrics.NewCounter(genMetricName("checker_runs_total", "fail", "get")),
-		FailGetPenalty:    metrics.NewFloatCounter(genMetricName("checker_points", "fail", "get")),
-
 		CheckInternalErrorsTotal:    metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "check")),
-		GetInternalErrorsTotal:      metrics.NewCounter(genInternalErrMetricName("checker_internal_errors_total", "get")),
 		CheckInternalErrorsDuration: metrics.NewHistogram(genInternalErrMetricName("checker_internal_errors_duration", "check")),
-		GetInternalErrorsDuration:   metrics.NewHistogram(genInternalErrMetricName("checker_internal_errors_duration", "get")),
 
 		SuccessCheckDuration: metrics.NewHistogram(genMetricName("checker_run_duration", "success", "check")),
 		FailCheckDuration:    metrics.NewHistogram(genMetricName("checker_run_duration", "fail", "check")),
-
-		SuccessGetDuration: metrics.NewHistogram(genMetricName("checker_run_duration", "success", "get")),
-		FailGetDuration:    metrics.NewHistogram(genMetricName("checker_run_duration", "fail", "get")),
 	}
 
 	c.checkerMetrics[checkerID] = m
