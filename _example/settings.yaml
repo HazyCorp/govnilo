@@ -1,13 +1,6 @@
 services:
   example:
     target: 'example.service:8000'
-    sploits:
-      example_attack:
-        run_options:
-          rate:
-            times: 0
-            per: 1s
-          max_goroutines: 100
     checkers:
       sleeper:
         check:
@@ -15,8 +8,8 @@ services:
           fail_penalty: 1
           run_options:
             rate:
-              times: 0
-              per: 1s
+              times: 1
+              per: 10s
             max_goroutines: 0
         get:
           # get check is empty, we don't need to run it
