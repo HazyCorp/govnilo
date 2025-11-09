@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"time"
 
 	"github.com/HazyCorp/govnilo/internal/checkerctrl"
 	"github.com/HazyCorp/govnilo/internal/configuration"
@@ -84,10 +83,6 @@ func NewLogger(lc fx.Lifecycle) *zap.Logger {
 	return l
 }
 
-func NewSaveStrategy() (checkerctrl.SaveStrategy, error) {
-	return checkerctrl.NewDummySaveStratedgy(2048, 0.1, time.Hour)
-}
-
 func GetConstructors() []any {
 	config, err := configuration.Read()
 	if err != nil {
@@ -138,7 +133,6 @@ func GetConstructors() []any {
 		},
 		NewRedisClient,
 		NewGRPCServer,
-		NewSaveStrategy,
 		checkerctrl.NewFX,
 		metricsrv.NewFX,
 		fxutil.AsIface[checkerctrl.ControllerStorage](checkerctrl.NewAsyncFileStoreFX),

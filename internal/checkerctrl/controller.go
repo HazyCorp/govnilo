@@ -33,7 +33,6 @@ type Controller struct {
 	storage            ControllerStorage
 	settingsProvider   SettingsProvider
 	conf               Config
-	strategy           SaveStrategy
 
 	runCtx     context.Context
 	runCancel  context.CancelFunc
@@ -55,7 +54,6 @@ type ControllerIn struct {
 	Storage          ControllerStorage
 	SettingsProvider SettingsProvider
 	Config           Config
-	Strategy         SaveStrategy
 }
 
 func New(in ControllerIn) *Controller {
@@ -71,7 +69,6 @@ func New(in ControllerIn) *Controller {
 		rr:                 raterunner.New(in.Logger),
 		conf:               in.Config,
 		runErrChan:         make(chan error, 1),
-		strategy:           in.Strategy,
 		settingsProvider:   in.SettingsProvider,
 		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics),
 	}
