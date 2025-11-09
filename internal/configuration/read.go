@@ -48,8 +48,11 @@ func defaultConfig() *Config {
 		},
 		Logging: hzlog.DefaultConfig(),
 		Redis: Redis{
-			Host: "localhost",
-			Port: 6379,
+			Host:     "localhost",
+			Port:     6379,
+			Username: "govnilo",
+			Password: "govnilo-rulit",
+			DB:       0,
 		},
 	}
 }

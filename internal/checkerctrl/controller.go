@@ -151,6 +151,7 @@ func (c *Controller) genCheckerCheckTask(
 
 	return func(ctx context.Context) error {
 		ctx, span := tracer.Start(ctx, "checker.Check")
+		ctx = hzlog.ContextWith(ctx, slog.Any("checker_id", checkerID))
 		defer span.End()
 
 		currentSettings := c.currentSettings.Load()

@@ -17,7 +17,7 @@ import (
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/fx"
@@ -88,7 +88,7 @@ func NewSaveStrategy() (checkerctrl.SaveStrategy, error) {
 	return checkerctrl.NewDummySaveStratedgy(2048, 0.1, time.Hour)
 }
 
-func GetConstructors() []interface{} {
+func GetConstructors() []any {
 	config, err := configuration.Read()
 	if err != nil {
 		slog.Error("cannot read config", hzlog.Error(err))
@@ -108,6 +108,10 @@ func GetConstructors() []interface{} {
 			semconv.ServiceNameKey.String("govnilo"),
 		),
 	)
+	if err != nil {
+		slog.Error("cannot merge resource", hzlog.Error(err))
+		os.Exit(1)
+	}
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(resource),

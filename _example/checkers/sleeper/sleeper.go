@@ -34,7 +34,7 @@ func NewSleeperChecker(l *slog.Logger, r *redis.Client) *SleeperChecker {
 	}
 }
 
-func (c *SleeperChecker) Check(ctx context.Context, target string) ([]byte, error) {
+func (c *SleeperChecker) Check(ctx context.Context, target string) error {
 	// Trace ID is automatically included in logs via hzlog context
 	l := govnilo.GetLogger(ctx, c.l)
 	l.DebugContext(ctx, "Starting CHECK operation")
@@ -42,28 +42,10 @@ func (c *SleeperChecker) Check(ctx context.Context, target string) ([]byte, erro
 	t := time.Now().String()
 	err := c.r.Set(ctx, "sleeper-check", t, redis.KeepTTL).Err()
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot set redis key")
+		return errors.Wrap(err, "cannot set redis key")
 	}
 	l.DebugContext(ctx, "successfully set redis key", slog.String("key", "sleeper-check"), slog.String("value", t))
 
-	return nil, nil
-}
-
-func (c *SleeperChecker) Get(ctx context.Context, target string, data []byte) error {
-	// Trace ID is automatically included in logs via hzlog context
-	l := govnilo.GetLogger(ctx, c.l)
-	l.DebugContext(ctx, "Starting GET operation")
-
-	// Check if the key exists in Redis
-	result, err := c.r.Get(ctx, "sleeper-check").Result()
-	if err != nil {
-		if err == redis.Nil {
-			return errors.New("sleeper-check key not found in Redis")
-		}
-		return errors.Wrap(err, "cannot get redis key")
-	}
-
-	l.DebugContext(ctx, "successfully verified sleeper-check key exists", slog.String("result", result))
 	return nil
 }
 

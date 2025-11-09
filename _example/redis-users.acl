@@ -1,5 +1,3 @@
 user default off
 
 user govnilo on >govnilo-rulit ~* &* +@all
-
-user admin on >admin-secret ~* &* +@all

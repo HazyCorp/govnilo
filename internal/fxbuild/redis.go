@@ -110,6 +110,7 @@ func (h *redisLogHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 		return nil
 	}
 }
+
 func NewRedisClient(c configuration.Redis, lc fx.Lifecycle, l *slog.Logger) *redis.Client {
 	hook := &redisLogHook{l: l.With(slog.String("component", "infra:redis"))}
 	client := redis.NewClient(&redis.Options{
@@ -129,7 +130,14 @@ func NewRedisClient(c configuration.Redis, lc fx.Lifecycle, l *slog.Logger) *red
 			return nil
 		},
 		func(ctx context.Context) {
-			_ = client.Close()
+			l.Info("closing redis client")
+			err := client.Close()
+			if err != nil {
+				l.Error("cannot close redis client", hzlog.Error(err))
+				return
+			}
+
+			l.Info("redis client closed")
 		}))
 
 	return client

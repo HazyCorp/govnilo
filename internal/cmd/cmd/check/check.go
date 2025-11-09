@@ -1,17 +1,22 @@
 package check
 
 import (
+	"context"
+	"log/slog"
 	"time"
 
 	"github.com/HazyCorp/govnilo/internal/cmd/globflags"
-	"github.com/HazyCorp/govnilo/internal/cmdutil"
+	"github.com/HazyCorp/govnilo/internal/fxbuild"
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/util"
+	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 )
 
 func init() {
@@ -32,9 +37,27 @@ var CheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "runs single check using the provided target",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		checkers, err := cmdutil.ExtractCheckers(false)
-		if err != nil {
-			return errors.Wrap(err, "cannot extract checkers from command context")
+		fxOpts := []fx.Option{
+			fx.Provide(
+				fxbuild.GetConstructors()...,
+			),
+			fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger }),
+		}
+
+		type checkersIn struct {
+			fx.In
+
+			Checkers []hazycheck.Checker `group:"checkers"`
+		}
+
+		var checkers []hazycheck.Checker
+		fxOpts = append(fxOpts, fx.Invoke(func(in checkersIn) {
+			checkers = in.Checkers
+		}))
+
+		app := fx.New(fxOpts...)
+		if err := app.Start(context.Background()); err != nil {
+			return errors.Wrap(err, "cannot build the app to extract the checkers")
 		}
 
 		ctx := cmd.Context()
@@ -59,6 +82,8 @@ var CheckCmd = &cobra.Command{
 		if !exists {
 			return errors.Errorf("service with name %q not registered", service)
 		}
+
+		ctx = hzlog.ContextWith(ctx, slog.Any("checker_id", checkerID))
 
 		start := time.Now()
 		if err := checker.Check(ctx, target); err != nil {

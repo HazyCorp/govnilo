@@ -43,8 +43,11 @@ func Execute() {
 	})
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		fmt.Println()
-		fmt.Printf("❌❌❌ Error occurred: %s\n", err)
+		output := map[string]any{
+			"message": fmt.Sprintf("Error occurred: %s", err),
+		}
+		util.PrintJson(output)
+
 		os.Exit(1)
 	}
 }
