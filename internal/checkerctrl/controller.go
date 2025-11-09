@@ -2,6 +2,7 @@ package checkerctrl
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -74,7 +75,7 @@ func New(in ControllerIn) (*Controller, error) {
 
 		c.registerMetrics(checkerID)
 
-		handle, err := c.rr.RegisterTask(c.genCheckerCheckTask(checker))
+		handle, err := c.rr.RegisterTask(c.genCheckerCheckTask(checker), raterunner.WithTaskID(fmt.Sprintf("%s__%s__check", checkerID.Service, checkerID.Name)))
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot register checker check task")
 		}

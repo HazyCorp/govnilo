@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -148,9 +149,7 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 			r.mu.Lock()
 			defer r.mu.Unlock()
 
-			for k, v := range r.tasks {
-				copied[k] = v
-			}
+			maps.Copy(copied, r.tasks)
 		}()
 
 		for taskID, task := range copied {
@@ -231,17 +230,52 @@ func (r *RateRunner) cleanup(ctx context.Context) error {
 	return nil
 }
 
-func (r *RateRunner) RegisterTask(f TaskFunc) (*TaskHandle, error) {
+type Option interface {
+	apply(*registerTaskOptions)
+}
+
+type registerTaskOptionsFunc func(*registerTaskOptions)
+
+func (f registerTaskOptionsFunc) apply(o *registerTaskOptions) {
+	f(o)
+}
+
+type registerTaskOptions struct {
+	taskID *string
+}
+
+func WithTaskID(taskID string) Option {
+	return registerTaskOptionsFunc(func(o *registerTaskOptions) {
+		o.taskID = &taskID
+	})
+}
+
+func (r *RateRunner) RegisterTask(f TaskFunc, opts ...Option) (*TaskHandle, error) {
 	options := RunOptions{
 		Rate:          Rate{Times: 0, Per: time.Second},
 		MaxGoroutines: 0,
 	}
-	taskID := fmt.Sprintf("task-%d", r.idCounter.Add(1))
 
-	r.l.Debug("registering task in rate runner", slog.String("task_id", taskID), slog.Int("max_goroutines", options.MaxGoroutines))
+	var o registerTaskOptions
+	for _, opt := range opts {
+		opt.apply(&o)
+	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	var taskID string
+	if o.taskID != nil {
+		taskID = *o.taskID
+	} else {
+		taskID = fmt.Sprintf("task-%d", r.idCounter.Add(1))
+	}
+
+	if _, exists := r.tasks[taskID]; exists {
+		return nil, errors.Errorf("task %s already registered", taskID)
+	}
+
+	r.l.Debug("registering task in rate runner", slog.String("task_id", taskID), slog.Int("max_goroutines", options.MaxGoroutines))
 
 	spec := &taskSpec{
 		l:          r.l.With(slog.String("task_id", taskID)),
