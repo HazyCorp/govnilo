@@ -25,17 +25,15 @@ type Config struct {
 }
 
 type Controller struct {
-	l                  *slog.Logger
-	registeredCheckers map[hazycheck.CheckerID]hazycheck.Checker
-	checkerHandles     map[hazycheck.CheckerID]*raterunner.TaskHandle
-	settingsProvider   SettingsProvider
-	conf               Config
+	l                *slog.Logger
+	settingsProvider SettingsProvider
+	conf             Config
 
 	runCtx     context.Context
 	runCancel  context.CancelFunc
 	runErrChan chan error
 
-	checkerMetrics map[hazycheck.CheckerID]*checkerMetrics
+	checkers map[hazycheck.CheckerID]*checkerEntry
 
 	currentSettings atomic.Pointer[checkersettings.Settings]
 
@@ -51,28 +49,36 @@ type ControllerIn struct {
 	Config           Config
 }
 
+type checkerEntry struct {
+	checker hazycheck.Checker
+	handle  *raterunner.TaskHandle
+	metrics *checkerMetrics
+}
+
 func New(in ControllerIn) (*Controller, error) {
 	c := &Controller{
-		l:                  in.Logger.With(slog.String("component", "infra:checker-controller")),
-		registeredCheckers: make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers)),
-		checkerHandles:     make(map[hazycheck.CheckerID]*raterunner.TaskHandle, len(in.Checkers)),
-		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics, len(in.Checkers)),
-		rr:                 raterunner.New(in.Logger),
-		conf:               in.Config,
-		runErrChan:         make(chan error, 1),
-		settingsProvider:   in.SettingsProvider,
+		l:                in.Logger.With(slog.String("component", "infra:checker-controller")),
+		checkers:         make(map[hazycheck.CheckerID]*checkerEntry, len(in.Checkers)),
+		rr:               raterunner.New(in.Logger),
+		conf:             in.Config,
+		runErrChan:       make(chan error, 1),
+		settingsProvider: in.SettingsProvider,
 	}
 
 	for _, checker := range in.Checkers {
-		c.registeredCheckers[checker.CheckerID()] = checker
+		checkerID := checker.CheckerID()
+		entry := &checkerEntry{
+			checker: checker,
+		}
+		c.checkers[checkerID] = entry
+
+		c.registerMetrics(checkerID)
 
 		handle, err := c.rr.RegisterTask(c.genCheckerCheckTask(checker))
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot register checker check task")
 		}
-		c.checkerHandles[checker.CheckerID()] = handle
-
-		c.registerMetrics(checker.CheckerID())
+		entry.handle = handle
 	}
 
 	return c, nil
@@ -259,7 +265,7 @@ func (c *Controller) syncState(ctx context.Context) error {
 
 	var errlist *multierror.Error
 
-	for checkerID := range c.registeredCheckers {
+	for checkerID, entry := range c.checkers {
 		l := c.l.With("checker_id", checkerID)
 
 		svcName, checkerName := checkerID.Service, checkerID.Name
@@ -302,8 +308,8 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 		}
 
-		handle, exists := c.checkerHandles[checkerID]
-		if !exists {
+		handle := entry.handle
+		if handle == nil {
 			errlist = multierror.Append(
 				errlist,
 				errors.Errorf("checker handle %q not registered", checkerID),

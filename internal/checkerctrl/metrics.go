@@ -47,14 +47,19 @@ func (c *Controller) metricsFor(checkerID hazycheck.CheckerID) *checkerMetrics {
 }
 
 func (c *Controller) registerMetrics(checkerID hazycheck.CheckerID) {
-	c.checkerMetrics[checkerID] = c.metricsFor(checkerID)
+	entry, exists := c.checkers[checkerID]
+	if !exists {
+		panic(fmt.Sprintf("trying to register metrics for not created checker %+v", checkerID))
+	}
+
+	entry.metrics = c.metricsFor(checkerID)
 }
 
 func (c *Controller) checkerMetricsFor(checkerID hazycheck.CheckerID) *checkerMetrics {
-	m, exists := c.checkerMetrics[checkerID]
-	if !exists {
+	entry, exists := c.checkers[checkerID]
+	if !exists || entry.metrics == nil {
 		panic(fmt.Sprintf("trying to fetch metrics of not created checker %+v", checkerID))
 	}
 
-	return m
+	return entry.metrics
 }

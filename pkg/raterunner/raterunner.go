@@ -232,13 +232,10 @@ func (r *RateRunner) cleanup(ctx context.Context) error {
 }
 
 func (r *RateRunner) RegisterTask(f TaskFunc) (*TaskHandle, error) {
-	return r.RegisterTaskWithOptions(f, RunOptions{
+	options := RunOptions{
 		Rate:          Rate{Times: 0, Per: time.Second},
 		MaxGoroutines: 0,
-	})
-}
-
-func (r *RateRunner) RegisterTaskWithOptions(f TaskFunc, options RunOptions) (*TaskHandle, error) {
+	}
 	taskID := fmt.Sprintf("task-%d", r.idCounter.Add(1))
 
 	r.l.Debug("registering task in rate runner", slog.String("task_id", taskID), slog.Int("max_goroutines", options.MaxGoroutines))
