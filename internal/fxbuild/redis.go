@@ -111,6 +111,18 @@ func (h *redisLogHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis
 	}
 }
 
+type rlogging struct {
+	l *slog.Logger
+}
+
+func (l *rlogging) Printf(ctx context.Context, format string, v ...interface{}) {
+	l.l.InfoContext(ctx, fmt.Sprintf(format, v...))
+}
+
+func newRedisLogger(l *slog.Logger) *rlogging {
+	return &rlogging{l: l.With(slog.String("component", "infra:redis"))}
+}
+
 func NewRedisClient(c configuration.Redis, lc fx.Lifecycle, l *slog.Logger) *redis.Client {
 	hook := &redisLogHook{l: l.With(slog.String("component", "infra:redis"))}
 	client := redis.NewClient(&redis.Options{
@@ -120,6 +132,7 @@ func NewRedisClient(c configuration.Redis, lc fx.Lifecycle, l *slog.Logger) *red
 		DB:       c.DB,
 	})
 	client.AddHook(hook)
+	redis.SetLogger(newRedisLogger(l))
 
 	lc.Append(fx.StartStopHook(
 		func(ctx context.Context) error {
