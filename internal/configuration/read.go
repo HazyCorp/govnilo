@@ -19,7 +19,6 @@ type Config struct {
 
 	Logging          hzlog.Config                       `json:"logging" yaml:"logging"`
 	Serve            Serve                              `json:"serve" yaml:"serve"`
-	AsyncFileStore   checkerctrl.AsyncFileStoreConfig   `json:"async_file_store" yaml:"async_file_store"`
 	Controller       checkerctrl.Config                 `json:"controller" yaml:"controller"`
 	Metrics          metricsrv.Config                   `json:"metrics" yaml:"metrics"`
 	SettingsProvider checkerctrl.SettingsProviderConfig `json:"settings_provider" yaml:"settings_provider"`
@@ -30,10 +29,6 @@ func defaultConfig() *Config {
 	return &Config{
 		Serve: Serve{
 			Port: 13337,
-		},
-		AsyncFileStore: checkerctrl.AsyncFileStoreConfig{
-			Path:         "/tmp/checker_state.bin",
-			SyncInterval: time.Second,
 		},
 		Controller: checkerctrl.Config{
 			SyncInterval: time.Second,
@@ -86,9 +81,6 @@ func Read() (Config, error) {
 func Validate(c *Config) error {
 	if c.Serve.Port == 0 {
 		return errors.Errorf("config.serve.port must be provided")
-	}
-	if c.AsyncFileStore.Path == "" {
-		return errors.Errorf("config.async_file_store.path must be provided")
 	}
 	if c.Controller.SyncInterval == 0 {
 		return errors.Errorf("config.controller.sync_interval must be provided")

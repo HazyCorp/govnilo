@@ -4,7 +4,6 @@ go 1.24.0
 
 require (
 	github.com/VictoriaMetrics/metrics v1.35.2
-	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-slog/otelslog v0.3.0
@@ -42,7 +41,6 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
-	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect

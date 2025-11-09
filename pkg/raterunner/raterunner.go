@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/HazyCorp/govnilo/internal/taskrunner"
@@ -35,12 +36,36 @@ type RunOptions struct {
 	MaxGoroutines int
 }
 
+type TaskHandle struct {
+	spec *taskSpec
+}
+
+func (h *TaskHandle) SetOptions(options RunOptions) error {
+	if options.Rate.Per == 0 {
+		return errors.Errorf("rate.Per must be nonzero")
+	}
+
+	// Update rate limiter spec first to avoid races between limiter and run options.
+	if err := h.spec.rateLimitter.SetSpec(ratelimit.Spec{
+		Times: options.Rate.Times,
+		Per:   options.Rate.Per,
+	}); err != nil {
+		return errors.Wrapf(err, "cannot set task rate for %q", h.spec.id)
+	}
+
+	h.spec.mu.Lock()
+	defer h.spec.mu.Unlock()
+
+	h.spec.runOptions = options
+	return nil
+}
+
 type taskSpec struct {
 	l  *slog.Logger
 	mu sync.Mutex
 
-	f    TaskFunc
-	name string
+	f  TaskFunc
+	id string
 
 	stat             Stat
 	runOptions       RunOptions
@@ -87,14 +112,17 @@ type RateRunner struct {
 
 	tr    *taskrunner.TaskRunner
 	tasks map[string]*taskSpec
+
+	idCounter atomic.Uint64
 }
 
 func New(l *slog.Logger) *RateRunner {
 	return &RateRunner{
 		l: l.With(slog.String("component", "infra:rate-runner")),
 
-		tr:    taskrunner.NewTaskRunner(l),
-		tasks: make(map[string]*taskSpec),
+		tr:        taskrunner.NewTaskRunner(l),
+		tasks:     make(map[string]*taskSpec),
+		idCounter: atomic.Uint64{},
 	}
 }
 
@@ -125,23 +153,23 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 			}
 		}()
 
-		for taskName, task := range copied {
-			l := r.l.With(slog.String("task_name", taskName))
+		for taskID, task := range copied {
+			l := r.l.With(slog.String("task_id", taskID))
 			l.Debug("checking task if it needs to adjust amount of replicas")
 
 			// Get needed instances without limit
 			neededInstances := task.neededInstances()
 
 			metrics.GetOrCreateGauge(
-				fmt.Sprintf("checker_raterunner_needed_instances{task_name=%q}", taskName),
+				fmt.Sprintf("checker_raterunner_needed_instances{task_id=%q}", taskID),
 				nil,
 			).Set(float64(neededInstances))
 			metrics.GetOrCreateGauge(
-				fmt.Sprintf("checker_raterunner_max_goroutines{task_name=%q}", taskName),
+				fmt.Sprintf("checker_raterunner_max_goroutines{task_id=%q}", taskID),
 				nil,
 			).Set(float64(task.runOptions.MaxGoroutines))
 			metrics.GetOrCreateGauge(
-				fmt.Sprintf("checker_raterunner_current_instances{task_name=%q}", taskName),
+				fmt.Sprintf("checker_raterunner_current_instances{task_id=%q}", taskID),
 				nil,
 			).Set(float64(task.currentInstances))
 
@@ -171,7 +199,7 @@ func (r *RateRunner) Run(ctx context.Context) (err error) {
 					return
 				}
 
-				if err := r.tr.UpdateTaskInstances(taskName, int(neededInstances)); err != nil {
+				if err := r.tr.UpdateTaskInstances(taskID, int(neededInstances)); err != nil {
 					l.Warn("cannot update amount of instances", hzlog.Error(err))
 					return
 				}
@@ -203,94 +231,46 @@ func (r *RateRunner) cleanup(ctx context.Context) error {
 	return nil
 }
 
-func (r *RateRunner) TaskRegistered(taskName string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	_, exists := r.tasks[taskName]
-	return exists
-}
-
-func (r *RateRunner) RegisterTask(taskName string, f TaskFunc) error {
-	return r.RegisterTaskWithOptions(taskName, f, RunOptions{
+func (r *RateRunner) RegisterTask(f TaskFunc) (*TaskHandle, error) {
+	return r.RegisterTaskWithOptions(f, RunOptions{
 		Rate:          Rate{Times: 0, Per: time.Second},
 		MaxGoroutines: 0,
 	})
 }
 
-func (r *RateRunner) RegisterTaskWithOptions(taskName string, f TaskFunc, options RunOptions) error {
-	r.l.Debug("registering task in rate runner", slog.String("task_name", taskName), slog.Int("max_goroutines", options.MaxGoroutines))
+func (r *RateRunner) RegisterTaskWithOptions(f TaskFunc, options RunOptions) (*TaskHandle, error) {
+	taskID := fmt.Sprintf("task-%d", r.idCounter.Add(1))
+
+	r.l.Debug("registering task in rate runner", slog.String("task_id", taskID), slog.Int("max_goroutines", options.MaxGoroutines))
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.tasks[taskName]; exists {
-		return errors.Errorf("cannot register task, task already registered")
-	}
-
 	spec := &taskSpec{
-		l:          r.l.With(slog.String("task_name", taskName)),
+		l:          r.l.With(slog.String("task_id", taskID)),
 		f:          f,
-		name:       taskName,
+		id:         taskID,
 		stat:       NewPercentile(0.95, time.Minute),
 		runOptions: options,
 		rateLimitter: ratelimit.New(
 			ratelimit.Spec{Times: options.Rate.Times, Per: options.Rate.Per},
-			ratelimit.WithLogger(r.l.With(slog.String("task_name", taskName))),
+			ratelimit.WithLogger(r.l.With(slog.String("task_id", taskID))),
 		),
 	}
 
-	r.tasks[taskName] = spec
+	r.tasks[taskID] = spec
 
 	toRegister := r.prepareTask(spec)
-	if err := r.tr.RegisterTask(taskName, toRegister); err != nil {
-		return errors.Wrap(err, "cannot register task to task runner")
+	if err := r.tr.RegisterTask(taskID, toRegister); err != nil {
+		delete(r.tasks, taskID)
+		return nil, errors.Wrap(err, "cannot register task to task runner")
 	}
 
-	return nil
-}
-
-func (r *RateRunner) SetTaskOptions(taskName string, options RunOptions) error {
-	if options.Rate.Per == 0 {
-		return errors.Errorf("rate.Per must be nonzero")
+	handle := &TaskHandle{
+		spec: spec,
 	}
 
-	var t *taskSpec
-	var exists bool
-	var err error
-	func() {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-
-		t, exists = r.tasks[taskName]
-		if !exists {
-			err = errors.Errorf("task %s not registered to rate runner", taskName)
-			return
-		}
-	}()
-
-	if err != nil {
-		return err
-	}
-
-	// Set rate limiter spec
-	err = t.rateLimitter.SetSpec(ratelimit.Spec{
-		Times: options.Rate.Times,
-		Per:   options.Rate.Per,
-	})
-	if err != nil {
-		return errors.Wrap(err, "cannot set task rate")
-	}
-
-	// Atomically update run options
-	func() {
-		t.mu.Lock()
-		defer t.mu.Unlock()
-
-		t.runOptions = options
-	}()
-
-	return nil
+	return handle, nil
 }
 
 func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
@@ -309,7 +289,7 @@ func (r *RateRunner) prepareTask(t *taskSpec) TaskFunc {
 
 			start := time.Now()
 			if err := t.f(ctx); err != nil {
-				r.l.Warn("task failed in rate runner, restarting", slog.String("task_name", t.name), hzlog.Error(err))
+				r.l.Warn("task failed in rate runner, restarting", slog.String("task_id", t.id), hzlog.Error(err))
 				// we don't need to update avg on failed tasks
 				continue
 			}

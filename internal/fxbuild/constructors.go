@@ -135,7 +135,6 @@ func GetConstructors() []any {
 		NewGRPCServer,
 		checkerctrl.NewFX,
 		metricsrv.NewFX,
-		fxutil.AsIface[checkerctrl.ControllerStorage](checkerctrl.NewAsyncFileStoreFX),
 	)
 
 	if config.SettingsProvider.FromFile != nil {

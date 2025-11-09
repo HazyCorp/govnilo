@@ -2,9 +2,7 @@ package checkerctrl
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,13 +22,12 @@ import (
 
 type Config struct {
 	SyncInterval time.Duration `json:"sync_interval" yaml:"sync_interval"`
-	TargetHost   string        `json:"target_host" yaml:"target_host"`
 }
 
 type Controller struct {
 	l                  *slog.Logger
 	registeredCheckers map[hazycheck.CheckerID]hazycheck.Checker
-	storage            ControllerStorage
+	checkerHandles     map[hazycheck.CheckerID]*raterunner.TaskHandle
 	settingsProvider   SettingsProvider
 	conf               Config
 
@@ -38,8 +35,7 @@ type Controller struct {
 	runCancel  context.CancelFunc
 	runErrChan chan error
 
-	checkerMetricsMu sync.RWMutex
-	checkerMetrics   map[hazycheck.CheckerID]*checkerMetrics
+	checkerMetrics map[hazycheck.CheckerID]*checkerMetrics
 
 	currentSettings atomic.Pointer[checkersettings.Settings]
 
@@ -51,37 +47,49 @@ type ControllerIn struct {
 
 	Logger           *slog.Logger
 	Checkers         []hazycheck.Checker `group:"checkers"`
-	Storage          ControllerStorage
 	SettingsProvider SettingsProvider
 	Config           Config
 }
 
-func New(in ControllerIn) *Controller {
-	idToChecker := make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers))
-	for _, check := range in.Checkers {
-		idToChecker[check.CheckerID()] = check
-	}
-
-	return &Controller{
+func New(in ControllerIn) (*Controller, error) {
+	c := &Controller{
 		l:                  in.Logger.With(slog.String("component", "infra:checker-controller")),
-		registeredCheckers: idToChecker,
-		storage:            in.Storage,
+		registeredCheckers: make(map[hazycheck.CheckerID]hazycheck.Checker, len(in.Checkers)),
+		checkerHandles:     make(map[hazycheck.CheckerID]*raterunner.TaskHandle, len(in.Checkers)),
+		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics, len(in.Checkers)),
 		rr:                 raterunner.New(in.Logger),
 		conf:               in.Config,
 		runErrChan:         make(chan error, 1),
 		settingsProvider:   in.SettingsProvider,
-		checkerMetrics:     make(map[hazycheck.CheckerID]*checkerMetrics),
 	}
+
+	for _, checker := range in.Checkers {
+		c.registeredCheckers[checker.CheckerID()] = checker
+
+		handle, err := c.rr.RegisterTask(c.genCheckerCheckTask(checker))
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot register checker check task")
+		}
+		c.checkerHandles[checker.CheckerID()] = handle
+
+		c.registerMetrics(checker.CheckerID())
+	}
+
+	return c, nil
 }
 
-func NewFX(in ControllerIn, lc fx.Lifecycle, sd fx.Shutdowner) *Controller {
-	ctrl := New(in)
+func NewFX(in ControllerIn, lc fx.Lifecycle, sd fx.Shutdowner) (*Controller, error) {
+	ctrl, err := New(in)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create checker controller")
+	}
+
 	lc.Append(fx.Hook{
 		OnStart: ctrl.Start,
 		OnStop:  ctrl.Stop,
 	})
 
-	return ctrl
+	return ctrl, err
 }
 
 func (c *Controller) Start(ctx context.Context) error {
@@ -251,7 +259,7 @@ func (c *Controller) syncState(ctx context.Context) error {
 
 	var errlist *multierror.Error
 
-	for checkerID, checker := range c.registeredCheckers {
+	for checkerID := range c.registeredCheckers {
 		l := c.l.With("checker_id", checkerID)
 
 		svcName, checkerName := checkerID.Service, checkerID.Name
@@ -281,7 +289,9 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 		}()
 
-		var checkOptions raterunner.RunOptions
+		checkOptions := raterunner.RunOptions{
+			Rate: raterunner.ZeroRate,
+		}
 		if checkerExists {
 			checkOptions = raterunner.RunOptions{
 				Rate: raterunner.Rate{
@@ -292,9 +302,16 @@ func (c *Controller) syncState(ctx context.Context) error {
 			}
 		}
 
-		checkerTaskName := fmt.Sprintf("%s__%s__check", svcName, checkerName)
-		checkerTask := c.genCheckerCheckTask(checker)
-		if err := c.setTaskRunOptions(checkerTaskName, checkerTask, checkOptions); err != nil {
+		handle, exists := c.checkerHandles[checkerID]
+		if !exists {
+			errlist = multierror.Append(
+				errlist,
+				errors.Errorf("checker handle %q not registered", checkerID),
+			)
+			continue
+		}
+
+		if err := handle.SetOptions(checkOptions); err != nil {
 			errlist = multierror.Append(
 				errlist,
 				errors.Wrapf(err, "cannot set rate on check %q", checkerID),
@@ -304,28 +321,6 @@ func (c *Controller) syncState(ctx context.Context) error {
 	}
 
 	return errlist.ErrorOrNil()
-}
-
-func (c *Controller) setTaskRunOptions(taskName string, task raterunner.TaskFunc, options raterunner.RunOptions) error {
-	if !c.rr.TaskRegistered(taskName) {
-		if err := c.rr.RegisterTaskWithOptions(taskName, task, options); err != nil {
-			return errors.Wrapf(err, "cannot register task %q to rate runner", taskName)
-		}
-	} else {
-		// task is already registered, atomically update all options
-		if err := c.rr.SetTaskOptions(taskName, options); err != nil {
-			return errors.Wrapf(err, "cannot set task options for task %q", taskName)
-		}
-		return nil
-	}
-
-	// task is registered now, set the options
-	err := c.rr.SetTaskOptions(taskName, options)
-	if err != nil {
-		return errors.Wrapf(err, "cannot set task options in rate runner for task %q", taskName)
-	}
-
-	return nil
 }
 
 func (c *Controller) waitFor(ctx context.Context, d time.Duration) error {

@@ -1,13 +1,8 @@
 serve:
   port: 15559
 
-async_file_store:
-  path: /tmp/checker-state.bin
-  sync_interval: 1s
-
 controller:
   sync_interval: 1s
-  target_host: localhost
 
 metrics:
   port: 14448
