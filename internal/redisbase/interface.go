@@ -26,9 +26,12 @@ type Entity interface {
 // and automatic cleanup of expired entries.
 //
 // T is the entity type that must implement the Entity interface and be a pointer.
-type Storage[T interface { Entity; ~*U }, U any] interface {
+type Storage[T interface {
+	Entity
+	~*U
+}, U any] interface {
 	// Save stores an entity in Redis. The entity is stored with TTL and tracked
-	// in both a membership set and an expiration sorted set for efficient cleanup.
+	// in an expiration sorted set for efficient cleanup.
 	// Returns an error if the save operation fails.
 	Save(ctx context.Context, entity T) error
 
@@ -49,7 +52,7 @@ type Storage[T interface { Entity; ~*U }, U any] interface {
 	GetMostRecent(ctx context.Context) (T, error)
 
 	// Delete removes an entity and its associated tracking data from Redis.
-	// This includes removing the entity from the membership set and expiration sorted set.
+	// This includes removing the entity from the expiration sorted set.
 	// Returns an error if the delete operation fails.
 	Delete(ctx context.Context, id string) error
 

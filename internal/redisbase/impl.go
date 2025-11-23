@@ -57,7 +57,6 @@ type storage[T interface {
 
 	storageName string
 	keyPrefix   string
-	idsSetKey   string
 	expZSetKey  string
 	ttl         time.Duration
 
@@ -143,7 +142,6 @@ func NewStorage[T interface {
 		r:                input.RedisClient,
 		l:                logger,
 		keyPrefix:        keyPrefix,
-		idsSetKey:        keyPrefix + "ids",
 		expZSetKey:       keyPrefix + "exp",
 		storageName:      storageName,
 		ttl:              ttl,
@@ -155,7 +153,7 @@ func NewStorage[T interface {
 	return s, nil
 }
 
-// Save stores an entity in Redis with TTL and tracks it in membership and expiration sets.
+// Save stores an entity in Redis with TTL and tracks it in expiration sorted set.
 func (s *storage[T, U]) Save(ctx context.Context, entity T) error {
 	start := time.Now()
 	defer s.metrics.SaveDuration.UpdateDuration(start)
@@ -175,7 +173,6 @@ func (s *storage[T, U]) Save(ctx context.Context, entity T) error {
 	key := s.keyFor(id)
 	pipe := s.r.TxPipeline()
 	pipe.Set(ctx, key, data, s.ttl)
-	pipe.SAdd(ctx, s.idsSetKey, id)
 	pipe.ZAdd(ctx, s.expZSetKey, redis.Z{Score: float64(createdAt), Member: id})
 
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -228,7 +225,7 @@ func (s *storage[T, U]) GetRandom(ctx context.Context) (T, error) {
 
 	for range maxAttempts {
 		attempts++
-		idCmd := s.r.SRandMember(ctx, s.idsSetKey)
+		idCmd := s.r.ZRandMember(ctx, s.expZSetKey, 1)
 		if err := idCmd.Err(); err != nil {
 			if err == redis.Nil {
 				return zero, redis.Nil
@@ -236,7 +233,12 @@ func (s *storage[T, U]) GetRandom(ctx context.Context) (T, error) {
 			return zero, errors.Wrap(err, "cannot get random ID from redis")
 		}
 
-		id := idCmd.Val()
+		ids := idCmd.Val()
+		if len(ids) == 0 {
+			return zero, redis.Nil
+		}
+
+		id := ids[0]
 		if id == "" {
 			return zero, redis.Nil
 		}
@@ -312,7 +314,6 @@ func (s *storage[T, U]) Delete(ctx context.Context, id string) error {
 
 	pipe := s.r.TxPipeline()
 	pipe.Del(ctx, s.keyFor(id))
-	pipe.SRem(ctx, s.idsSetKey, id)
 	pipe.ZRem(ctx, s.expZSetKey, id)
 
 	_, err := pipe.Exec(ctx)
@@ -372,7 +373,6 @@ func (s *storage[T, U]) cleanupExpired(ctx context.Context, max int64) error {
 	for _, id := range expiredIDs {
 		members = append(members, id)
 	}
-	pipe.SRem(ctx, s.idsSetKey, members...)
 	pipe.ZRem(ctx, s.expZSetKey, members...)
 
 	_, err = pipe.Exec(ctx)
