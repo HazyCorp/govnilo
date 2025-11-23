@@ -86,28 +86,34 @@ type CheckerID struct {
 }
 
 // Checker is an interface, which must be implemented by every keep-alive checker.
-// Checker will be called like this: initially Checker.Check will be called. Check method
-// will be called very frequently. It need's to be concurrently safe.
+// Checkers verify service consistency and availability by running operations that create and verify data persistence.
 //
-// In most of the cases, Checker.Check must create some data in the service, and check, that that data
-// persists in the service. Example: create user and try to register with provided credentials.
+// The Check() method is called very frequently and must be concurrently safe.
+// In most cases, Check() should create some data in the service (e.g., create a user
+// and register with provided credentials) and store any necessary state in Redis
+// for later verification.
 //
-// []byte array returned from Checker.Check is data, specific to this Checker.Check call. Example: login and password
-// of the created user. This data will be used in future Checker.Get calls.
+// State persistence: Any state created during Check() that needs to be verified later
+// must be stored in Redis using the redis client, that can be provided within constructor.
+// So, to create Check() that verifies data persistence, you need to get some random data from redis
+// and check that data is present and not corrupted.
+// You may use RedisStorage (see govnilo.RedisStorage) for that.
 //
-// Checker.Get is a method, that will be called periodically, not so frequently, compared to Checker.Check.
-// This method must check, that service didn't drop data of the corresponding Checker.Check call.
-// Not all the Checker.Check calls will be verified, only some randomly chosen. But checker author doesn't need
-// to think about it. Data, provided to Checker.Get call is exactly the same, that was returned from Checker.Check.
+// All checkers must return the service name via CheckerID(). This name will be used in logs, metrics and some game mechanics.
+// CheckerID() MUST work with nil receiver.
 //
-// All checkers must return name of the service, this checker was written for. This name will be used in configs.
-//
-// Trace ID is provided in the context for debugging purposes. Use govnilo.GetTraceID(ctx) to retrieve it.
+// Trace ID is provided in the context for debugging purposes. Use govnilo.GetTraceID(ctx)
+// to retrieve it, or use govnilo.GetLogger(ctx, logger) which automatically includes trace
+// and span IDs in log output.
 type Checker interface {
-	// Check must run most common flow of your service, to check, that all of it's components are working.
-	// If you have multiple flows to check, you need to run these checks concurrently and wait untill their end.
-	// You may use sync.WaitGroup to achieve that result, or event errgroup.Group, if you want to.
-	// The context contains a trace ID for debugging: use govnilo.GetTraceID(ctx) to retrieve it.
+	// Check must run the most common flow of your service to verify that all components are working.
+	// If you have multiple flows to check, you need to run these checks concurrently and wait
+	// until their completion. You may use sync.WaitGroup or errgroup.Group for this.
+	//
+	// Any state that needs to be verified later must be stored in Redis using RedisStorage.
+	// The context contains a trace ID for debugging: use govnilo.GetTraceID(ctx) to retrieve it,
+	// or govnilo.GetLogger(ctx, logger) for automatic trace/span ID inclusion in logs.
+	// You may use slog.InfoContext, slog.DebugContext and so on to include the trace and span ids in logs.
 	Check(ctx context.Context, target string) error
 
 	// CheckerID returns the id of the checker. This method is used for internal checker registration.
