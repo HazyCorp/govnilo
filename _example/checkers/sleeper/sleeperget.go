@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/HazyCorp/govnilo/pkg/govnilo"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/pkg/errors"
 )
@@ -31,7 +30,7 @@ func (c *SleeperGetChecker) Check(ctx context.Context, target string) error {
 
 	sleeper, err := c.s.GetRandom(ctx)
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if errors.Is(err, govnilo.ErrNotFound) {
 			return govnilo.InternalError(errors.Wrap(err, "no sleeper entity found"))
 		}
 		return errors.Wrap(err, "cannot get sleeper entity")

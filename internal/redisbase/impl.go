@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -182,7 +183,7 @@ func (s *storage[T, U]) Save(ctx context.Context, entity T) error {
 	return nil
 }
 
-// GetByID retrieves an entity by its ID. Returns redis.Nil if id not found in redis.
+// GetByID retrieves an entity by its ID. Returns govnilo.ErrNotFound if id not found in redis.
 func (s *storage[T, U]) GetByID(ctx context.Context, id string) (T, error) {
 	start := time.Now()
 	defer s.metrics.GetByIDDuration.UpdateDuration(start)
@@ -195,8 +196,8 @@ func (s *storage[T, U]) GetByID(ctx context.Context, id string) (T, error) {
 
 	key := s.keyFor(id)
 	val, err := s.r.Get(ctx, key).Result()
-	if err == redis.Nil {
-		return zero, redis.Nil
+	if errors.Is(err, redis.Nil) {
+		return zero, hazycheck.ErrNotFound
 	}
 	if err != nil {
 		return zero, errors.Wrap(err, "cannot get entity from redis")
@@ -227,25 +228,25 @@ func (s *storage[T, U]) GetRandom(ctx context.Context) (T, error) {
 		attempts++
 		idCmd := s.r.ZRandMember(ctx, s.expZSetKey, 1)
 		if err := idCmd.Err(); err != nil {
-			if err == redis.Nil {
-				return zero, redis.Nil
+			if errors.Is(err, redis.Nil) {
+				return zero, hazycheck.ErrNotFound
 			}
 			return zero, errors.Wrap(err, "cannot get random ID from redis")
 		}
 
 		ids := idCmd.Val()
 		if len(ids) == 0 {
-			return zero, redis.Nil
+			return zero, hazycheck.ErrNotFound
 		}
 
 		id := ids[0]
 		if id == "" {
-			return zero, redis.Nil
+			return zero, hazycheck.ErrNotFound
 		}
 
 		key := s.keyFor(id)
 		getCmd := s.r.Get(ctx, key)
-		if getCmd.Err() == redis.Nil {
+		if errors.Is(getCmd.Err(), redis.Nil) {
 			// Stale ID, remove and retry
 			s.l.DebugContext(ctx, "found stale entry in redis, retry", slog.String("id", id))
 
@@ -274,7 +275,7 @@ func (s *storage[T, U]) GetRandom(ctx context.Context) (T, error) {
 		return entity, nil
 	}
 
-	return zero, redis.Nil
+	return zero, hazycheck.ErrNotFound
 }
 
 // GetMostRecent returns the most recently created entity from storage.
@@ -287,19 +288,19 @@ func (s *storage[T, U]) GetMostRecent(ctx context.Context) (T, error) {
 	// Get the most recent ID from the sorted set (highest score = most recent timestamp)
 	ids, err := s.r.ZRevRange(ctx, s.expZSetKey, 0, 0).Result()
 	if err != nil {
-		if err == redis.Nil {
-			return zero, redis.Nil
+		if errors.Is(err, redis.Nil) {
+			return zero, hazycheck.ErrNotFound
 		}
 		return zero, errors.Wrap(err, "cannot get most recent ID from redis")
 	}
 
 	if len(ids) == 0 {
-		return zero, redis.Nil
+		return zero, hazycheck.ErrNotFound
 	}
 
 	id := ids[0]
 	if id == "" {
-		return zero, redis.Nil
+		return zero, hazycheck.ErrNotFound
 	}
 
 	// Retrieve the entity by ID
@@ -354,7 +355,7 @@ func (s *storage[T, U]) cleanupExpired(ctx context.Context, max int64) error {
 
 	expiredIDs, err := s.r.ZRangeByScore(ctx, s.expZSetKey, rng).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return nil
 		}
 		return err

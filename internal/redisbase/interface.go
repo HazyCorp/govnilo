@@ -35,20 +35,20 @@ type Storage[T interface {
 	// Returns an error if the save operation fails.
 	Save(ctx context.Context, entity T) error
 
-	// GetByID retrieves an entity by its ID. Returns an error if the entity
-	// is not found or if the retrieval operation fails.
+	// GetByID retrieves an entity by its ID. Returns govnilo.ErrNotFound if the entity is not found.
+	// Returns a different error if the retrieval operation fails.
 	GetByID(ctx context.Context, id string) (T, error)
 
 	// GetRandom returns a random, non-expired entity from storage.
 	// This method automatically handles stale entries by removing them and retrying.
 	// Returns an error if no entities are available or if the operation fails.
-	// Redis nil is returned if there weren't any entities in the storage.
+	// govnilo.ErrNotFound is returned if there weren't any entities in the storage.
 	GetRandom(ctx context.Context) (T, error)
 
 	// GetMostRecent returns the most recently created entity from storage.
 	// This method retrieves the entity with the highest timestamp from the expiration sorted set.
 	// Returns an error if no entities are available or if the operation fails.
-	// Redis nil is returned if there weren't any entities in the storage.
+	// govnilo.ErrNotFound is returned if there weren't any entities in the storage.
 	GetMostRecent(ctx context.Context) (T, error)
 
 	// Delete removes an entity and its associated tracking data from Redis.

@@ -92,6 +92,9 @@ var (
 	// infrastructure problems and service problems in error handling.
 	InternalError = hazycheck.InternalError
 
+	// ErrNotFound is returned when an entity is not found in the storage.
+	ErrNotFound = hazycheck.ErrNotFound
+
 	// GetLogger returns a logger enriched with context attributes and trace information.
 	// It extracts OpenTelemetry trace and span IDs from the context and adds them
 	// as log attributes for better observability and debugging.
