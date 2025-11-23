@@ -75,7 +75,7 @@ func New(in ControllerIn) (*Controller, error) {
 
 		c.registerMetrics(checkerID)
 
-		handle, err := c.rr.RegisterTask(c.genCheckerCheckTask(checker), raterunner.WithTaskID(fmt.Sprintf("%s__%s__check", checkerID.Service, checkerID.Name)))
+		handle, err := c.rr.RegisterTask(c.genCheckerTask(checker), raterunner.WithTaskID(fmt.Sprintf("%s__%s__check", checkerID.Service, checkerID.Name)))
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot register checker check task")
 		}
@@ -152,7 +152,7 @@ func (c *Controller) run(ctx context.Context) error {
 	}
 }
 
-func (c *Controller) genCheckerCheckTask(
+func (c *Controller) genCheckerTask(
 	checker hazycheck.Checker,
 ) raterunner.TaskFunc {
 	checkerID := checker.CheckerID()
@@ -163,7 +163,6 @@ func (c *Controller) genCheckerCheckTask(
 
 	return func(ctx context.Context) error {
 		ctx, span := tracer.Start(ctx, "checker.Check")
-		ctx = hzlog.ContextWith(ctx, slog.Any("checker_id", checkerID))
 		defer span.End()
 
 		currentSettings := c.currentSettings.Load()
