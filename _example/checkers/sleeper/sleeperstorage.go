@@ -15,7 +15,7 @@ type SleeperEntity struct {
 	Value string `json:"value"`
 }
 
-func (e *SleeperEntity) ID() string {
+func (e *SleeperEntity) GetID() string {
 	return e.Id
 }
 

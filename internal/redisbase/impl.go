@@ -159,7 +159,7 @@ func (s *storage[T, U]) Save(ctx context.Context, entity T) error {
 	start := time.Now()
 	defer s.metrics.SaveDuration.UpdateDuration(start)
 
-	id := entity.ID()
+	id := entity.GetID()
 	if id == "" {
 		return errors.New("entity ID cannot be empty")
 	}

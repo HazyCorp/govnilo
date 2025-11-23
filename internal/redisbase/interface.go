@@ -5,9 +5,9 @@ import "context"
 // Entity represents a storage entity that can be serialized and deserialized.
 // Implementations must provide methods to identify, encode, and decode the entity.
 type Entity interface {
-	// ID returns the entity's unique identifier as a string.
+	// GetID returns the entity's unique identifier as a string.
 	// This ID is used as the key for storing and retrieving the entity.
-	ID() string
+	GetID() string
 
 	// Encode serializes the entity into a byte representation.
 	// The returned bytes must be in a format that Decode can successfully parse.
