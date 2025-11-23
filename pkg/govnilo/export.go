@@ -7,11 +7,10 @@ import (
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/redisbase"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
-	"github.com/redis/go-redis/v9"
 )
 
 type (
-	// Checker is the interface that must be implemented by every keep-alive checker.
+	// Checker is an interface, which must be implemented by every keep-alive checker.
 	// Checkers verify service consistency and availability by running operations that create and verify data persistence.
 	//
 	// The Check() method is called very frequently and must be concurrently safe.
@@ -20,7 +19,7 @@ type (
 	// for later verification.
 	//
 	// State persistence: Any state created during Check() that needs to be verified later
-	// must be stored in Redis using the redis client, that is provided within constructor.
+	// must be stored in Redis using the redis client, that can be provided within constructor.
 	// So, to create Check() that verifies data persistence, you need to get some random data from redis
 	// and check that data is present and not corrupted.
 	// You may use RedisStorage (see govnilo.RedisStorage) for that.
@@ -28,10 +27,9 @@ type (
 	// All checkers must return the service name via CheckerID(). This name will be used in logs, metrics and some game mechanics.
 	// CheckerID() MUST work with nil receiver.
 	//
-	// Trace ID is provided in the context for debugging purposes. Use govnilo.GetTraceID(ctx)
-	// to retrieve it, or use govnilo.GetLogger(ctx, logger) which automatically includes trace
-	// and span IDs in log output. You may use slog.InfoContext, slog.DebugContext and so on
-	// to include the trace and span ids in logs.
+	// Trace ID is provided in the context for debugging purposes.
+	// Use govnilo.GetLogger(ctx, logger) which automatically includes trace
+	// and span IDs in log output.
 	Checker = hazycheck.Checker
 
 	// CheckerID identifies a checker by service name and checker name.
@@ -54,12 +52,14 @@ type (
 	// It provides methods for storing, retrieving, and managing entities with TTL support
 	// and automatic cleanup of expired entries.
 	//
-	// T must implement the Entity interface. The storage automatically handles
-	// expiration tracking and cleanup of stale entries.
+	// T must be a pointer type that implements the Entity interface (e.g., *Speaker).
+	// U is the underlying type that T points to (e.g., Speaker).
+	// The storage automatically handles expiration tracking and cleanup of stale entries.
 	RedisStorage[T Entity] interface {
 		Save(ctx context.Context, entity T) error
 		GetByID(ctx context.Context, id string) (T, error)
 		GetRandom(ctx context.Context) (T, error)
+		GetMostRecent(ctx context.Context) (T, error)
 		Delete(ctx context.Context, id string) error
 		Start(ctx context.Context) error
 		Stop(ctx context.Context) error
@@ -84,7 +84,7 @@ var (
 	// RegisterConstructor registers a dependency constructor with the framework.
 	// Use this to register additional dependencies (like HTTP clients, database connections)
 	// that your checkers or sploits need. The constructor will be used for dependency injection.
-	// Allows to avoid creation of the same entity in each constructor. 
+	// Allows to avoid creation of the same entity in each constructor.
 	RegisterConstructor = hazycheck.RegisterConstructor
 
 	// InternalError wraps an internal error to mark it as an internal system error
@@ -99,7 +99,12 @@ var (
 )
 
 // NewRedisStorage creates a new Redis storage instance for entities of type T.
-// T must implement the Entity interface.
-func NewRedisStorage[T Entity](r *redis.Client, input RedisStorageInput) (RedisStorage[T], error) {
-	return redisbase.NewStorage[T](r, input)
+// T must be a pointer type that implements the Entity interface (e.g., *Speaker).
+// U is the underlying type that T points to (e.g., Speaker).
+// The RedisClient must be provided in the RedisStorageInput.
+func NewRedisStorage[T interface {
+	Entity
+	~*U
+}, U any](input RedisStorageInput) (RedisStorage[T], error) {
+	return redisbase.NewStorage[T](input)
 }

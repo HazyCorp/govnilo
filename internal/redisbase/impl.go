@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"sync"
 	"time"
 
@@ -40,10 +41,16 @@ type StorageInput struct {
 	// Logger is the logger to use for storage operations. If not provided,
 	// a no-op logger will be used.
 	Logger *slog.Logger
+
+	// RedisClient is the client which will be used to communicate with the redis
+	RedisClient *redis.Client
 }
 
 // storage is the private implementation of Storage interface.
-type storage[T Entity] struct {
+type storage[T interface {
+	Entity
+	~*U
+}, U any] struct {
 	r  *redis.Client
 	l  *slog.Logger
 	wg sync.WaitGroup
@@ -61,6 +68,10 @@ type storage[T Entity] struct {
 	metrics       *storageMetrics
 }
 
+type EntityPtr[E Entity] interface {
+	~*E
+}
+
 // NewStorage creates a new Storage instance for the given entity type.
 // It takes a Redis client and configuration via StorageInput.
 //
@@ -70,16 +81,25 @@ type storage[T Entity] struct {
 //
 // Example:
 //
-//	stor, err := redisbase.NewStorage[*Speaker](redisClient, redisbase.StorageInput{
-//		ServiceName:      "babyconf",
-//		EntityNamePlural: "speakers",
-//		TTL:              time.Hour,
-//		CleanupInterval:  time.Second,
-//		CleanupBatchSize: 1_000,
-//		Logger:           logger,
-//	})
-func NewStorage[T Entity](r *redis.Client, input StorageInput) (Storage[T], error) {
-	if r == nil {
+//		stor, err := redisbase.NewStorage[*Speaker](redisClient, redisbase.StorageInput{
+//			ServiceName:      "babyconf",
+//			EntityNamePlural: "speakers",
+//			TTL:              time.Hour,
+//			CleanupInterval:  time.Second,
+//			CleanupBatchSize: 1_000,
+//			Logger:           logger,
+//	        RedisClient:      r,
+//		})
+func NewStorage[T interface {
+	Entity
+	~*U
+}, U any](input StorageInput) (Storage[T, U], error) {
+	var zero T
+	if reflect.TypeOf(zero).Kind() != reflect.Pointer {
+		return nil, errors.Errorf("type %T MUST be pointer", zero)
+	}
+
+	if input.RedisClient == nil {
 		return nil, errors.New("redis client cannot be nil")
 	}
 	if input.ServiceName == "" {
@@ -119,8 +139,8 @@ func NewStorage[T Entity](r *redis.Client, input StorageInput) (Storage[T], erro
 		cleanupBatchSize = 1_000
 	}
 
-	s := &storage[T]{
-		r:                r,
+	s := &storage[T, U]{
+		r:                input.RedisClient,
 		l:                logger,
 		keyPrefix:        keyPrefix,
 		idsSetKey:        keyPrefix + "ids",
@@ -136,7 +156,7 @@ func NewStorage[T Entity](r *redis.Client, input StorageInput) (Storage[T], erro
 }
 
 // Save stores an entity in Redis with TTL and tracks it in membership and expiration sets.
-func (s *storage[T]) Save(ctx context.Context, entity T) error {
+func (s *storage[T, U]) Save(ctx context.Context, entity T) error {
 	start := time.Now()
 	defer s.metrics.SaveDuration.UpdateDuration(start)
 
@@ -166,7 +186,7 @@ func (s *storage[T]) Save(ctx context.Context, entity T) error {
 }
 
 // GetByID retrieves an entity by its ID. Returns redis.Nil if id not found in redis.
-func (s *storage[T]) GetByID(ctx context.Context, id string) (T, error) {
+func (s *storage[T, U]) GetByID(ctx context.Context, id string) (T, error) {
 	start := time.Now()
 	defer s.metrics.GetByIDDuration.UpdateDuration(start)
 
@@ -185,7 +205,7 @@ func (s *storage[T]) GetByID(ctx context.Context, id string) (T, error) {
 		return zero, errors.Wrap(err, "cannot get entity from redis")
 	}
 
-	var entity T
+	entity := T(new(U))
 	if err := entity.Decode([]byte(val)); err != nil {
 		return zero, errors.Wrap(err, "cannot decode entity")
 	}
@@ -194,7 +214,7 @@ func (s *storage[T]) GetByID(ctx context.Context, id string) (T, error) {
 }
 
 // GetRandom returns a random, non-expired entity from storage.
-func (s *storage[T]) GetRandom(ctx context.Context) (T, error) {
+func (s *storage[T, U]) GetRandom(ctx context.Context) (T, error) {
 	start := time.Now()
 	defer s.metrics.GetRandomDuration.UpdateDuration(start)
 
@@ -237,7 +257,7 @@ func (s *storage[T]) GetRandom(ctx context.Context) (T, error) {
 			return zero, errors.Wrap(err, "cannot get entity from redis")
 		}
 
-		var entity T
+		entity := T(new(U))
 		if err := entity.Decode([]byte(getCmd.Val())); err != nil {
 			// Corrupted data, remove and retry
 			s.l.WarnContext(ctx, "cannot decode entity, removing stale entry", slog.String("id", id), slog.Any("error", err))
@@ -255,8 +275,37 @@ func (s *storage[T]) GetRandom(ctx context.Context) (T, error) {
 	return zero, redis.Nil
 }
 
+// GetMostRecent returns the most recently created entity from storage.
+func (s *storage[T, U]) GetMostRecent(ctx context.Context) (T, error) {
+	start := time.Now()
+	defer s.metrics.GetByIDDuration.UpdateDuration(start)
+
+	var zero T
+
+	// Get the most recent ID from the sorted set (highest score = most recent timestamp)
+	ids, err := s.r.ZRevRange(ctx, s.expZSetKey, 0, 0).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return zero, redis.Nil
+		}
+		return zero, errors.Wrap(err, "cannot get most recent ID from redis")
+	}
+
+	if len(ids) == 0 {
+		return zero, redis.Nil
+	}
+
+	id := ids[0]
+	if id == "" {
+		return zero, redis.Nil
+	}
+
+	// Retrieve the entity by ID
+	return s.GetByID(ctx, id)
+}
+
 // Delete removes an entity and its tracking data from Redis.
-func (s *storage[T]) Delete(ctx context.Context, id string) error {
+func (s *storage[T, U]) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return errors.New("entity ID cannot be empty")
 	}
@@ -275,25 +324,25 @@ func (s *storage[T]) Delete(ctx context.Context, id string) error {
 }
 
 // Start initializes the background cleanup routine.
-func (s *storage[T]) Start(ctx context.Context) error {
+func (s *storage[T, U]) Start(ctx context.Context) error {
 	s.startCleanup(s.cleanupInterval, s.cleanupBatchSize)
 	return nil
 }
 
 // Stop stops the background cleanup routine and waits for it to finish.
-func (s *storage[T]) Stop(ctx context.Context) error {
+func (s *storage[T, U]) Stop(ctx context.Context) error {
 	s.stopCleanup()
 	return nil
 }
 
 // keyFor constructs a Redis key for the given entity ID.
-func (s *storage[T]) keyFor(id string) string {
+func (s *storage[T, U]) keyFor(id string) string {
 	return s.keyPrefix + id
 }
 
 // cleanupExpired removes expired entity IDs from the membership set and expiration zset.
 // It finds entities where (createdAt + TTL) <= now, which means createdAt <= (now - TTL).
-func (s *storage[T]) cleanupExpired(ctx context.Context, max int64) error {
+func (s *storage[T, U]) cleanupExpired(ctx context.Context, max int64) error {
 	// Gauge on actual cleanup batch size
 	s.metrics.CleanupBatchSize.Set(float64(max))
 
@@ -338,7 +387,7 @@ func (s *storage[T]) cleanupExpired(ctx context.Context, max int64) error {
 }
 
 // startCleanup launches a background goroutine that periodically removes expired IDs.
-func (s *storage[T]) startCleanup(interval time.Duration, batch int64) {
+func (s *storage[T, U]) startCleanup(interval time.Duration, batch int64) {
 	if s.cleanupCancel != nil {
 		// already started
 		return
@@ -368,7 +417,7 @@ func (s *storage[T]) startCleanup(interval time.Duration, batch int64) {
 }
 
 // stopCleanup stops the background cleanup goroutine if running.
-func (s *storage[T]) stopCleanup() {
+func (s *storage[T, U]) stopCleanup() {
 	if s.cleanupCancel != nil {
 		s.cleanupCancel()
 		s.cleanupCancel = nil

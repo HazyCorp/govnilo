@@ -27,8 +27,15 @@ func RegisterChecker(constructor any) {
 		panic("not func provided to register")
 	}
 
-	if constrType.NumOut() != 1 {
-		panic("func returns not just checker in a single return value")
+	if constrType.NumOut() != 1 && constrType.NumOut() != 2 {
+		panic("func must return either checker or (checker, error)")
+	}
+
+	if constrType.NumOut() == 2 {
+		errType := constrType.Out(1)
+		if !errType.Implements(reflect.TypeOf((*error)(nil)).Elem()) {
+			panic("func must return either checker or (checker, error)")
+		}
 	}
 
 	retType := constrType.Out(0)
@@ -102,8 +109,8 @@ type CheckerID struct {
 // All checkers must return the service name via CheckerID(). This name will be used in logs, metrics and some game mechanics.
 // CheckerID() MUST work with nil receiver.
 //
-// Trace ID is provided in the context for debugging purposes. Use govnilo.GetTraceID(ctx)
-// to retrieve it, or use govnilo.GetLogger(ctx, logger) which automatically includes trace
+// Trace ID is provided in the context for debugging purposes.
+// Use govnilo.GetLogger(ctx, logger) which automatically includes trace
 // and span IDs in log output.
 type Checker interface {
 	// Check must run the most common flow of your service to verify that all components are working.

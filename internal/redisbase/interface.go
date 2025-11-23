@@ -25,8 +25,8 @@ type Entity interface {
 // It provides methods for storing, retrieving, and managing entities with TTL support
 // and automatic cleanup of expired entries.
 //
-// T is the entity type that must implement the Entity interface.
-type Storage[T Entity] interface {
+// T is the entity type that must implement the Entity interface and be a pointer.
+type Storage[T interface { Entity; ~*U }, U any] interface {
 	// Save stores an entity in Redis. The entity is stored with TTL and tracked
 	// in both a membership set and an expiration sorted set for efficient cleanup.
 	// Returns an error if the save operation fails.
@@ -41,6 +41,12 @@ type Storage[T Entity] interface {
 	// Returns an error if no entities are available or if the operation fails.
 	// Redis nil is returned if there weren't any entities in the storage.
 	GetRandom(ctx context.Context) (T, error)
+
+	// GetMostRecent returns the most recently created entity from storage.
+	// This method retrieves the entity with the highest timestamp from the expiration sorted set.
+	// Returns an error if no entities are available or if the operation fails.
+	// Redis nil is returned if there weren't any entities in the storage.
+	GetMostRecent(ctx context.Context) (T, error)
 
 	// Delete removes an entity and its associated tracking data from Redis.
 	// This includes removing the entity from the membership set and expiration sorted set.

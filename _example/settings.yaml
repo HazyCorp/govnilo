@@ -2,7 +2,7 @@ services:
   example:
     target: 'example.service:8000'
     checkers:
-      sleeper:
+      sleeper-put:
         check:
           success_points: 1
           fail_penalty: 1
@@ -12,11 +12,21 @@ services:
               per: 10s
             max_goroutines: 0
         get:
-          # get check is empty, we don't need to run it
-          success_points: 0 
-          fail_penalty: 0
           run_options:
             rate:
               times: 0
               per: 1s
+      sleeper-retrieve:
+        check:
+          success_points: 1
+          fail_penalty: 1
+          run_options:
+            rate:
+              times: 1
+              per: 10s
             max_goroutines: 0
+        get:
+          run_options:
+            rate:
+              times: 0
+              per: 1s

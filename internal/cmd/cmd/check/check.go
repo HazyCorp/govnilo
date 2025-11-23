@@ -80,7 +80,7 @@ var CheckCmd = &cobra.Command{
 			return item.CheckerID() == checkerID
 		})
 		if !exists {
-			return errors.Errorf("service with name %q not registered", service)
+			return errors.Errorf("either checker with name %q or service with name %q is not registered. Try to run list-checkers to see all the registered checkers.", globflags.CheckerName, service)
 		}
 
 		ctx = hzlog.ContextWith(ctx, slog.Any("checker_id", checkerID))
