@@ -1,4 +1,4 @@
-package checkerctrl
+package settingsprovider
 
 import (
 	"context"
@@ -16,37 +16,37 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type FileSettingsProviderIn struct {
+type FileIn struct {
 	fx.In
 
 	Checkers []hazycheck.Checker `group:"checkers"`
-	Config   *FileSettingsProviderConfig
+	Config   *FileConfig
 }
 
-type FileSettingsProviderConfig struct {
+type FileConfig struct {
 	Path string
 }
 
-var _ SettingsProvider = &FileSettingsProvider{}
+var _ SettingsProvider = &File{}
 
-type FileSettingsProvider struct {
-	c        *FileSettingsProviderConfig
+type File struct {
+	c        *FileConfig
 	checkers map[hazycheck.CheckerID]hazycheck.Checker
 }
 
-func NewFileSettingsProvider(in FileSettingsProviderIn) *FileSettingsProvider {
+func NewFile(in FileIn) *File {
 	checkers := make(map[hazycheck.CheckerID]hazycheck.Checker)
 	for _, c := range in.Checkers {
 		checkers[c.CheckerID()] = c
 	}
 
-	return &FileSettingsProvider{
+	return &File{
 		checkers: checkers,
 		c:        in.Config,
 	}
 }
 
-func (p *FileSettingsProvider) GetSettings(ctx context.Context) (*proto.Settings, error) {
+func (p *File) GetSettings(ctx context.Context) (*proto.Settings, error) {
 	data, err := os.ReadFile(p.c.Path)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read data from file")
@@ -79,7 +79,7 @@ func (p *FileSettingsProvider) GetSettings(ctx context.Context) (*proto.Settings
 	}
 
 	// Validate the settings
-	if err := validateSettings(protoS); err != nil {
+	if err := Validate(protoS); err != nil {
 		return nil, errors.Wrap(err, "read the settings from file, but they were not valid")
 	}
 

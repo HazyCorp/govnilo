@@ -7,6 +7,7 @@ import (
 	"github.com/HazyCorp/govnilo/internal/checkerctrl"
 	"github.com/HazyCorp/govnilo/internal/cmd/globflags"
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
+	"github.com/HazyCorp/govnilo/internal/settingsprovider"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 
 	"github.com/pkg/errors"
@@ -17,12 +18,12 @@ import (
 type Config struct {
 	fx.Out
 
-	Logging          hzlog.Config                       `json:"logging" yaml:"logging"`
-	Serve            Serve                              `json:"serve" yaml:"serve"`
-	Controller       checkerctrl.Config                 `json:"controller" yaml:"controller"`
-	Metrics          metricsrv.Config                   `json:"metrics" yaml:"metrics"`
-	SettingsProvider checkerctrl.SettingsProviderConfig `json:"settings_provider" yaml:"settings_provider"`
-	Redis            Redis                              `json:"redis" yaml:"redis"`
+	Logging          hzlog.Config            `json:"logging" yaml:"logging"`
+	Serve            Serve                   `json:"serve" yaml:"serve"`
+	Controller       checkerctrl.Config      `json:"controller" yaml:"controller"`
+	Metrics          metricsrv.Config        `json:"metrics" yaml:"metrics"`
+	SettingsProvider settingsprovider.Config `json:"settings_provider" yaml:"settings_provider"`
+	Redis            Redis                   `json:"redis" yaml:"redis"`
 }
 
 func defaultConfig() *Config {
@@ -36,8 +37,8 @@ func defaultConfig() *Config {
 		Metrics: metricsrv.Config{
 			Port: 14448,
 		},
-		SettingsProvider: checkerctrl.SettingsProviderConfig{
-			FromFile: &checkerctrl.FileSettingsProviderConfig{
+		SettingsProvider: settingsprovider.Config{
+			FromFile: &settingsprovider.FileConfig{
 				Path: "/etc/govnilo/settings.yaml",
 			},
 		},

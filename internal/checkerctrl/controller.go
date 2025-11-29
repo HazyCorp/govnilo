@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
+	"github.com/HazyCorp/govnilo/internal/settingsprovider"
 	"github.com/HazyCorp/govnilo/internal/taskrunner"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/pkg/raterunner"
@@ -26,7 +27,7 @@ type Config struct {
 
 type Controller struct {
 	l                *slog.Logger
-	settingsProvider SettingsProvider
+	settingsProvider settingsprovider.SettingsProvider
 	conf             Config
 
 	runCtx     context.Context
@@ -45,7 +46,7 @@ type ControllerIn struct {
 
 	Logger           *slog.Logger
 	Checkers         []hazycheck.Checker `group:"checkers"`
-	SettingsProvider SettingsProvider
+	SettingsProvider settingsprovider.SettingsProvider
 	Config           Config
 }
 
@@ -153,7 +154,7 @@ func (c *Controller) run(ctx context.Context) error {
 	}
 }
 
-type settings struct {
+type checkerTaskSettings struct {
 	target   string
 	settings *proto.CheckerSettings
 }
@@ -167,7 +168,7 @@ func (c *Controller) genCheckerTask(
 	// Generate trace ID for debugging (automatically adds to hzlog context)
 	tracer := otel.Tracer("govnilo/checker")
 
-	var lastSettings atomic.Pointer[settings]
+	var lastSettings atomic.Pointer[checkerTaskSettings]
 
 	updLogger := l.With(
 		slog.String("component", "infra:checker-controller:settings-updater"),
@@ -195,7 +196,7 @@ func (c *Controller) genCheckerTask(
 			return
 		}
 
-		lastSettings.Store(&settings{
+		lastSettings.Store(&checkerTaskSettings{
 			target:   target,
 			settings: checkerSettings,
 		})

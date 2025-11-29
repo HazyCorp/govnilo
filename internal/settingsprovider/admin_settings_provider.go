@@ -1,4 +1,4 @@
-package checkerctrl
+package settingsprovider
 
 import (
 	"context"
@@ -12,27 +12,27 @@ import (
 	"go.uber.org/fx"
 )
 
-type AdminSettingsProviderConfig struct {
+type AdminConfig struct {
 	adminklient.ClientConfig `yaml:",inline"`
 }
 
-type AdminSettingsProviderIn struct {
+type AdminIn struct {
 	fx.In
 
 	Checkers []hazycheck.Checker `group:"checkers"`
 	Logger   *slog.Logger
-	Config   *AdminSettingsProviderConfig
+	Config   *AdminConfig
 }
 
-var _ SettingsProvider = &AdminSettingsProvider{}
+var _ SettingsProvider = &Adminka{}
 
-type AdminSettingsProvider struct {
+type Adminka struct {
 	client   adminklient.Client
 	l        *slog.Logger
 	checkers map[hazycheck.CheckerID]hazycheck.Checker
 }
 
-func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvider, error) {
+func NewAdminka(in AdminIn) (*Adminka, error) {
 	client, err := adminklient.New(in.Config.ClientConfig, adminklient.WithLogger(in.Logger))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create adminklient.Client")
@@ -43,20 +43,20 @@ func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvide
 		checkers[c.CheckerID()] = c
 	}
 
-	return &AdminSettingsProvider{
+	return &Adminka{
 		client:   client,
 		l:        in.Logger.With(slog.String("component", "infra:adminka_settings_provider")),
 		checkers: checkers,
 	}, nil
 }
 
-func (p *AdminSettingsProvider) GetSettings(ctx context.Context) (*proto.Settings, error) {
+func (p *Adminka) GetSettings(ctx context.Context) (*proto.Settings, error) {
 	settings, err := p.client.GetConfig(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot pull settings from admin service")
 	}
 
-	if err := validateSettings(settings); err != nil {
+	if err := Validate(settings); err != nil {
 		return nil, errors.Wrap(err, "successfully read the settings, but they are not valid")
 	}
 

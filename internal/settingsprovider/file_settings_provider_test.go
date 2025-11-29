@@ -1,4 +1,4 @@
-package checkerctrl
+package settingsprovider
 
 import (
 	"context"
@@ -40,8 +40,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -109,8 +109,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -148,8 +148,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -183,8 +183,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -197,8 +197,8 @@ services:
 }
 
 func TestFileSettingsProvider_MissingFile(t *testing.T) {
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: "/nonexistent/path/settings.yaml",
 		},
 		Checkers: []hazycheck.Checker{},
@@ -242,8 +242,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -284,8 +284,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -318,8 +318,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},
@@ -368,8 +368,8 @@ services:
 	err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	provider := NewFileSettingsProvider(FileSettingsProviderIn{
-		Config: &FileSettingsProviderConfig{
+	provider := NewFile(FileIn{
+		Config: &FileConfig{
 			Path: filePath,
 		},
 		Checkers: []hazycheck.Checker{},

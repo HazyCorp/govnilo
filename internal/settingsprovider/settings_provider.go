@@ -1,4 +1,4 @@
-package checkerctrl
+package settingsprovider
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type SettingsProvider interface {
 	GetSettings(ctx context.Context) (*proto.Settings, error)
 }
 
-func validateSettings(settings *proto.Settings) error {
+func Validate(settings *proto.Settings) error {
 	seenServices := make(map[string]bool)
 
 	for svcIdx, svc := range settings.GetServices() {
@@ -68,9 +68,9 @@ func validateSettings(settings *proto.Settings) error {
 	return nil
 }
 
-type SettingsProviderConfig struct {
+type Config struct {
 	fx.Out
 
-	FromFile  *FileSettingsProviderConfig  `json:"from_file" yaml:"from_file"`
-	FromAdmin *AdminSettingsProviderConfig `json:"from_admin" yaml:"from_admin"`
+	FromFile  *FileConfig  `json:"from_file" yaml:"from_file"`
+	FromAdmin *AdminConfig `json:"from_admin" yaml:"from_admin"`
 }

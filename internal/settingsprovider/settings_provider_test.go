@@ -1,4 +1,4 @@
-package checkerctrl
+package settingsprovider
 
 import (
 	"testing"
@@ -33,12 +33,12 @@ func TestValidateSettings_Valid(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.NoError(t, err)
 }
 
 func TestValidateSettings_NilSettings(t *testing.T) {
-	err := validateSettings(nil)
+	err := Validate(nil)
 	require.NoError(t, err)
 }
 
@@ -53,7 +53,7 @@ func TestValidateSettings_NilService(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -67,7 +67,7 @@ func TestValidateSettings_EmptyServiceName(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -85,7 +85,7 @@ func TestValidateSettings_DuplicateServiceName(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -114,7 +114,7 @@ func TestValidateSettings_NilChecker(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -142,7 +142,7 @@ func TestValidateSettings_EmptyCheckerName(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -182,7 +182,7 @@ func TestValidateSettings_DuplicateCheckerName(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -204,7 +204,7 @@ func TestValidateSettings_NilRunOptions(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -229,7 +229,7 @@ func TestValidateSettings_NilRate(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -257,7 +257,7 @@ func TestValidateSettings_NilDuration(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -285,7 +285,7 @@ func TestValidateSettings_ZeroDuration(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.Error(t, err)
 }
 
@@ -331,6 +331,6 @@ func TestValidateSettings_MultipleServices(t *testing.T) {
 		},
 	}
 
-	err := validateSettings(settings)
+	err := Validate(settings)
 	require.NoError(t, err)
 }

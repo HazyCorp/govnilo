@@ -13,6 +13,7 @@ import (
 	"github.com/HazyCorp/govnilo/internal/grpcutil"
 	"github.com/HazyCorp/govnilo/internal/metricsrv"
 	"github.com/HazyCorp/govnilo/internal/registrar"
+	"github.com/HazyCorp/govnilo/internal/settingsprovider"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -138,9 +139,9 @@ func GetConstructors() []any {
 	)
 
 	if config.SettingsProvider.FromFile != nil {
-		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl.SettingsProvider](checkerctrl.NewFileSettingsProvider))
+		knownConstructors = append(knownConstructors, fxutil.AsIface[settingsprovider.SettingsProvider](settingsprovider.NewFile))
 	} else {
-		knownConstructors = append(knownConstructors, fxutil.AsIface[checkerctrl.SettingsProvider](checkerctrl.NewAdminSettingsProvider))
+		knownConstructors = append(knownConstructors, fxutil.AsIface[settingsprovider.SettingsProvider](settingsprovider.NewAdminka))
 	}
 
 	return knownConstructors
