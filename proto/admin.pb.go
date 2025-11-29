@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: proto/admin.proto
+// source: admin.proto
 
 package proto
 
@@ -31,7 +31,7 @@ type SetSettingsReq struct {
 
 func (x *SetSettingsReq) Reset() {
 	*x = SetSettingsReq{}
-	mi := &file_proto_admin_proto_msgTypes[0]
+	mi := &file_admin_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *SetSettingsReq) String() string {
 func (*SetSettingsReq) ProtoMessage() {}
 
 func (x *SetSettingsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[0]
+	mi := &file_admin_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *SetSettingsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSettingsReq.ProtoReflect.Descriptor instead.
 func (*SetSettingsReq) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{0}
+	return file_admin_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *SetSettingsReq) GetSettings() *Settings {
@@ -74,7 +74,7 @@ type SetSettingsRsp struct {
 
 func (x *SetSettingsRsp) Reset() {
 	*x = SetSettingsRsp{}
-	mi := &file_proto_admin_proto_msgTypes[1]
+	mi := &file_admin_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -86,7 +86,7 @@ func (x *SetSettingsRsp) String() string {
 func (*SetSettingsRsp) ProtoMessage() {}
 
 func (x *SetSettingsRsp) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[1]
+	mi := &file_admin_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -99,7 +99,7 @@ func (x *SetSettingsRsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSettingsRsp.ProtoReflect.Descriptor instead.
 func (*SetSettingsRsp) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{1}
+	return file_admin_proto_rawDescGZIP(), []int{1}
 }
 
 type GetSettingsReq struct {
@@ -110,7 +110,7 @@ type GetSettingsReq struct {
 
 func (x *GetSettingsReq) Reset() {
 	*x = GetSettingsReq{}
-	mi := &file_proto_admin_proto_msgTypes[2]
+	mi := &file_admin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +122,7 @@ func (x *GetSettingsReq) String() string {
 func (*GetSettingsReq) ProtoMessage() {}
 
 func (x *GetSettingsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[2]
+	mi := &file_admin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -135,7 +135,7 @@ func (x *GetSettingsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsReq.ProtoReflect.Descriptor instead.
 func (*GetSettingsReq) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{2}
+	return file_admin_proto_rawDescGZIP(), []int{2}
 }
 
 type GetSettingsRsp struct {
@@ -147,7 +147,7 @@ type GetSettingsRsp struct {
 
 func (x *GetSettingsRsp) Reset() {
 	*x = GetSettingsRsp{}
-	mi := &file_proto_admin_proto_msgTypes[3]
+	mi := &file_admin_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -159,7 +159,7 @@ func (x *GetSettingsRsp) String() string {
 func (*GetSettingsRsp) ProtoMessage() {}
 
 func (x *GetSettingsRsp) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[3]
+	mi := &file_admin_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +172,7 @@ func (x *GetSettingsRsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsRsp.ProtoReflect.Descriptor instead.
 func (*GetSettingsRsp) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{3}
+	return file_admin_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetSettingsRsp) GetSettings() *Settings {
@@ -183,15 +183,15 @@ func (x *GetSettingsRsp) GetSettings() *Settings {
 }
 
 type Settings struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Services      map[string]*ServiceSettings `protobuf:"bytes,1,rep,name=services,proto3" json:"services,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Services      []*ServiceSettings     `protobuf:"bytes,1,rep,name=services,proto3" json:"services,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Settings) Reset() {
 	*x = Settings{}
-	mi := &file_proto_admin_proto_msgTypes[4]
+	mi := &file_admin_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +203,7 @@ func (x *Settings) String() string {
 func (*Settings) ProtoMessage() {}
 
 func (x *Settings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[4]
+	mi := &file_admin_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,10 +216,10 @@ func (x *Settings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Settings.ProtoReflect.Descriptor instead.
 func (*Settings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{4}
+	return file_admin_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *Settings) GetServices() map[string]*ServiceSettings {
+func (x *Settings) GetServices() []*ServiceSettings {
 	if x != nil {
 		return x.Services
 	}
@@ -227,17 +227,17 @@ func (x *Settings) GetServices() map[string]*ServiceSettings {
 }
 
 type ServiceSettings struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Target        string                      `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Checkers      map[string]*CheckerSettings `protobuf:"bytes,2,rep,name=checkers,proto3" json:"checkers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Sploits       map[string]*SploitSettings  `protobuf:"bytes,3,rep,name=sploits,proto3" json:"sploits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	Checkers      []*CheckerSettings     `protobuf:"bytes,3,rep,name=checkers,proto3" json:"checkers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ServiceSettings) Reset() {
 	*x = ServiceSettings{}
-	mi := &file_proto_admin_proto_msgTypes[5]
+	mi := &file_admin_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -249,7 +249,7 @@ func (x *ServiceSettings) String() string {
 func (*ServiceSettings) ProtoMessage() {}
 
 func (x *ServiceSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[5]
+	mi := &file_admin_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -262,7 +262,14 @@ func (x *ServiceSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceSettings.ProtoReflect.Descriptor instead.
 func (*ServiceSettings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{5}
+	return file_admin_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ServiceSettings) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 func (x *ServiceSettings) GetTarget() string {
@@ -272,16 +279,9 @@ func (x *ServiceSettings) GetTarget() string {
 	return ""
 }
 
-func (x *ServiceSettings) GetCheckers() map[string]*CheckerSettings {
+func (x *ServiceSettings) GetCheckers() []*CheckerSettings {
 	if x != nil {
 		return x.Checkers
-	}
-	return nil
-}
-
-func (x *ServiceSettings) GetSploits() map[string]*SploitSettings {
-	if x != nil {
-		return x.Sploits
 	}
 	return nil
 }
@@ -296,7 +296,7 @@ type Rate struct {
 
 func (x *Rate) Reset() {
 	*x = Rate{}
-	mi := &file_proto_admin_proto_msgTypes[6]
+	mi := &file_admin_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +308,7 @@ func (x *Rate) String() string {
 func (*Rate) ProtoMessage() {}
 
 func (x *Rate) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[6]
+	mi := &file_admin_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +321,7 @@ func (x *Rate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rate.ProtoReflect.Descriptor instead.
 func (*Rate) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{6}
+	return file_admin_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Rate) GetTimes() uint64 {
@@ -340,15 +340,17 @@ func (x *Rate) GetPer() *durationpb.Duration {
 
 type CheckerSettings struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Check         *CheckSettings         `protobuf:"bytes,1,opt,name=check,proto3" json:"check,omitempty"`
-	Get           *GetSettings           `protobuf:"bytes,2,opt,name=get,proto3" json:"get,omitempty"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	RunOptions    *RunOptions            `protobuf:"bytes,2,opt,name=run_options,json=runOptions,proto3" json:"run_options,omitempty"`
+	SuccessPoints float64                `protobuf:"fixed64,3,opt,name=success_points,json=successPoints,proto3" json:"success_points,omitempty"`
+	FailPenalty   float64                `protobuf:"fixed64,4,opt,name=fail_penalty,json=failPenalty,proto3" json:"fail_penalty,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CheckerSettings) Reset() {
 	*x = CheckerSettings{}
-	mi := &file_proto_admin_proto_msgTypes[7]
+	mi := &file_admin_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -360,7 +362,7 @@ func (x *CheckerSettings) String() string {
 func (*CheckerSettings) ProtoMessage() {}
 
 func (x *CheckerSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[7]
+	mi := &file_admin_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -373,21 +375,35 @@ func (x *CheckerSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckerSettings.ProtoReflect.Descriptor instead.
 func (*CheckerSettings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{7}
+	return file_admin_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *CheckerSettings) GetCheck() *CheckSettings {
+func (x *CheckerSettings) GetName() string {
 	if x != nil {
-		return x.Check
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CheckerSettings) GetRunOptions() *RunOptions {
+	if x != nil {
+		return x.RunOptions
 	}
 	return nil
 }
 
-func (x *CheckerSettings) GetGet() *GetSettings {
+func (x *CheckerSettings) GetSuccessPoints() float64 {
 	if x != nil {
-		return x.Get
+		return x.SuccessPoints
 	}
-	return nil
+	return 0
+}
+
+func (x *CheckerSettings) GetFailPenalty() float64 {
+	if x != nil {
+		return x.FailPenalty
+	}
+	return 0
 }
 
 type RunOptions struct {
@@ -400,7 +416,7 @@ type RunOptions struct {
 
 func (x *RunOptions) Reset() {
 	*x = RunOptions{}
-	mi := &file_proto_admin_proto_msgTypes[8]
+	mi := &file_admin_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -412,7 +428,7 @@ func (x *RunOptions) String() string {
 func (*RunOptions) ProtoMessage() {}
 
 func (x *RunOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[8]
+	mi := &file_admin_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -425,7 +441,7 @@ func (x *RunOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunOptions.ProtoReflect.Descriptor instead.
 func (*RunOptions) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{8}
+	return file_admin_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RunOptions) GetRate() *Rate {
@@ -442,237 +458,54 @@ func (x *RunOptions) GetMaxGoroutines() int32 {
 	return 0
 }
 
-type CheckSettings struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RunOptions    *RunOptions            `protobuf:"bytes,1,opt,name=run_options,json=runOptions,proto3" json:"run_options,omitempty"`
-	SuccessPoints float64                `protobuf:"fixed64,2,opt,name=success_points,json=successPoints,proto3" json:"success_points,omitempty"`
-	FailPenalty   float64                `protobuf:"fixed64,3,opt,name=fail_penalty,json=failPenalty,proto3" json:"fail_penalty,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
+var File_admin_proto protoreflect.FileDescriptor
 
-func (x *CheckSettings) Reset() {
-	*x = CheckSettings{}
-	mi := &file_proto_admin_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CheckSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CheckSettings) ProtoMessage() {}
-
-func (x *CheckSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CheckSettings.ProtoReflect.Descriptor instead.
-func (*CheckSettings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *CheckSettings) GetRunOptions() *RunOptions {
-	if x != nil {
-		return x.RunOptions
-	}
-	return nil
-}
-
-func (x *CheckSettings) GetSuccessPoints() float64 {
-	if x != nil {
-		return x.SuccessPoints
-	}
-	return 0
-}
-
-func (x *CheckSettings) GetFailPenalty() float64 {
-	if x != nil {
-		return x.FailPenalty
-	}
-	return 0
-}
-
-type GetSettings struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RunOptions    *RunOptions            `protobuf:"bytes,1,opt,name=run_options,json=runOptions,proto3" json:"run_options,omitempty"`
-	SuccessPoints float64                `protobuf:"fixed64,2,opt,name=success_points,json=successPoints,proto3" json:"success_points,omitempty"`
-	FailPenalty   float64                `protobuf:"fixed64,3,opt,name=fail_penalty,json=failPenalty,proto3" json:"fail_penalty,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetSettings) Reset() {
-	*x = GetSettings{}
-	mi := &file_proto_admin_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSettings) ProtoMessage() {}
-
-func (x *GetSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSettings.ProtoReflect.Descriptor instead.
-func (*GetSettings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *GetSettings) GetRunOptions() *RunOptions {
-	if x != nil {
-		return x.RunOptions
-	}
-	return nil
-}
-
-func (x *GetSettings) GetSuccessPoints() float64 {
-	if x != nil {
-		return x.SuccessPoints
-	}
-	return 0
-}
-
-func (x *GetSettings) GetFailPenalty() float64 {
-	if x != nil {
-		return x.FailPenalty
-	}
-	return 0
-}
-
-type SploitSettings struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RunOptions    *RunOptions            `protobuf:"bytes,1,opt,name=run_options,json=runOptions,proto3" json:"run_options,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SploitSettings) Reset() {
-	*x = SploitSettings{}
-	mi := &file_proto_admin_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SploitSettings) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SploitSettings) ProtoMessage() {}
-
-func (x *SploitSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SploitSettings.ProtoReflect.Descriptor instead.
-func (*SploitSettings) Descriptor() ([]byte, []int) {
-	return file_proto_admin_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *SploitSettings) GetRunOptions() *RunOptions {
-	if x != nil {
-		return x.RunOptions
-	}
-	return nil
-}
-
-var File_proto_admin_proto protoreflect.FileDescriptor
-
-const file_proto_admin_proto_rawDesc = "" +
+const file_admin_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/admin.proto\x12\vadmin.proto\x1a\x1egoogle/protobuf/duration.proto\"C\n" +
+	"\vadmin.proto\x12\vadmin.proto\x1a\x1egoogle/protobuf/duration.proto\"C\n" +
 	"\x0eSetSettingsReq\x121\n" +
 	"\bsettings\x18\x01 \x01(\v2\x15.admin.proto.SettingsR\bsettings\"\x10\n" +
 	"\x0eSetSettingsRsp\"\x10\n" +
 	"\x0eGetSettingsReq\"C\n" +
 	"\x0eGetSettingsRsp\x121\n" +
-	"\bsettings\x18\x01 \x01(\v2\x15.admin.proto.SettingsR\bsettings\"\xa6\x01\n" +
-	"\bSettings\x12?\n" +
-	"\bservices\x18\x01 \x03(\v2#.admin.proto.Settings.ServicesEntryR\bservices\x1aY\n" +
-	"\rServicesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.admin.proto.ServiceSettingsR\x05value:\x028\x01\"\xea\x02\n" +
-	"\x0fServiceSettings\x12\x16\n" +
-	"\x06target\x18\x01 \x01(\tR\x06target\x12F\n" +
-	"\bcheckers\x18\x02 \x03(\v2*.admin.proto.ServiceSettings.CheckersEntryR\bcheckers\x12C\n" +
-	"\asploits\x18\x03 \x03(\v2).admin.proto.ServiceSettings.SploitsEntryR\asploits\x1aY\n" +
-	"\rCheckersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.admin.proto.CheckerSettingsR\x05value:\x028\x01\x1aW\n" +
-	"\fSploitsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
-	"\x05value\x18\x02 \x01(\v2\x1b.admin.proto.SploitSettingsR\x05value:\x028\x01\"I\n" +
+	"\bsettings\x18\x01 \x01(\v2\x15.admin.proto.SettingsR\bsettings\"D\n" +
+	"\bSettings\x128\n" +
+	"\bservices\x18\x01 \x03(\v2\x1c.admin.proto.ServiceSettingsR\bservices\"w\n" +
+	"\x0fServiceSettings\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x128\n" +
+	"\bcheckers\x18\x03 \x03(\v2\x1c.admin.proto.CheckerSettingsR\bcheckers\"I\n" +
 	"\x04Rate\x12\x14\n" +
 	"\x05times\x18\x01 \x01(\x04R\x05times\x12+\n" +
-	"\x03per\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\x03per\"o\n" +
-	"\x0fCheckerSettings\x120\n" +
-	"\x05check\x18\x01 \x01(\v2\x1a.admin.proto.CheckSettingsR\x05check\x12*\n" +
-	"\x03get\x18\x02 \x01(\v2\x18.admin.proto.GetSettingsR\x03get\"Z\n" +
+	"\x03per\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\x03per\"\xa9\x01\n" +
+	"\x0fCheckerSettings\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x128\n" +
+	"\vrun_options\x18\x02 \x01(\v2\x17.admin.proto.RunOptionsR\n" +
+	"runOptions\x12%\n" +
+	"\x0esuccess_points\x18\x03 \x01(\x01R\rsuccessPoints\x12!\n" +
+	"\ffail_penalty\x18\x04 \x01(\x01R\vfailPenalty\"Z\n" +
 	"\n" +
 	"RunOptions\x12%\n" +
 	"\x04rate\x18\x01 \x01(\v2\x11.admin.proto.RateR\x04rate\x12%\n" +
-	"\x0emax_goroutines\x18\x02 \x01(\x05R\rmaxGoroutines\"\x93\x01\n" +
-	"\rCheckSettings\x128\n" +
-	"\vrun_options\x18\x01 \x01(\v2\x17.admin.proto.RunOptionsR\n" +
-	"runOptions\x12%\n" +
-	"\x0esuccess_points\x18\x02 \x01(\x01R\rsuccessPoints\x12!\n" +
-	"\ffail_penalty\x18\x03 \x01(\x01R\vfailPenalty\"\x91\x01\n" +
-	"\vGetSettings\x128\n" +
-	"\vrun_options\x18\x01 \x01(\v2\x17.admin.proto.RunOptionsR\n" +
-	"runOptions\x12%\n" +
-	"\x0esuccess_points\x18\x02 \x01(\x01R\rsuccessPoints\x12!\n" +
-	"\ffail_penalty\x18\x03 \x01(\x01R\vfailPenalty\"J\n" +
-	"\x0eSploitSettings\x128\n" +
-	"\vrun_options\x18\x01 \x01(\v2\x17.admin.proto.RunOptionsR\n" +
-	"runOptions2\xa0\x01\n" +
+	"\x0emax_goroutines\x18\x02 \x01(\x05R\rmaxGoroutines2\xa0\x01\n" +
 	"\fAdminService\x12G\n" +
 	"\vSetSettings\x12\x1b.admin.proto.SetSettingsReq\x1a\x1b.admin.proto.SetSettingsRsp\x12G\n" +
 	"\vGetSettings\x12\x1b.admin.proto.GetSettingsReq\x1a\x1b.admin.proto.GetSettingsRspB#Z!github.com/HazyCorp/govnilo/protob\x06proto3"
 
 var (
-	file_proto_admin_proto_rawDescOnce sync.Once
-	file_proto_admin_proto_rawDescData []byte
+	file_admin_proto_rawDescOnce sync.Once
+	file_admin_proto_rawDescData []byte
 )
 
-func file_proto_admin_proto_rawDescGZIP() []byte {
-	file_proto_admin_proto_rawDescOnce.Do(func() {
-		file_proto_admin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_admin_proto_rawDesc), len(file_proto_admin_proto_rawDesc)))
+func file_admin_proto_rawDescGZIP() []byte {
+	file_admin_proto_rawDescOnce.Do(func() {
+		file_admin_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_admin_proto_rawDesc), len(file_admin_proto_rawDesc)))
 	})
-	return file_proto_admin_proto_rawDescData
+	return file_admin_proto_rawDescData
 }
 
-var file_proto_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
-var file_proto_admin_proto_goTypes = []any{
+var file_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_admin_proto_goTypes = []any{
 	(*SetSettingsReq)(nil),      // 0: admin.proto.SetSettingsReq
 	(*SetSettingsRsp)(nil),      // 1: admin.proto.SetSettingsRsp
 	(*GetSettingsReq)(nil),      // 2: admin.proto.GetSettingsReq
@@ -682,61 +515,47 @@ var file_proto_admin_proto_goTypes = []any{
 	(*Rate)(nil),                // 6: admin.proto.Rate
 	(*CheckerSettings)(nil),     // 7: admin.proto.CheckerSettings
 	(*RunOptions)(nil),          // 8: admin.proto.RunOptions
-	(*CheckSettings)(nil),       // 9: admin.proto.CheckSettings
-	(*GetSettings)(nil),         // 10: admin.proto.GetSettings
-	(*SploitSettings)(nil),      // 11: admin.proto.SploitSettings
-	nil,                         // 12: admin.proto.Settings.ServicesEntry
-	nil,                         // 13: admin.proto.ServiceSettings.CheckersEntry
-	nil,                         // 14: admin.proto.ServiceSettings.SploitsEntry
-	(*durationpb.Duration)(nil), // 15: google.protobuf.Duration
+	(*durationpb.Duration)(nil), // 9: google.protobuf.Duration
 }
-var file_proto_admin_proto_depIdxs = []int32{
-	4,  // 0: admin.proto.SetSettingsReq.settings:type_name -> admin.proto.Settings
-	4,  // 1: admin.proto.GetSettingsRsp.settings:type_name -> admin.proto.Settings
-	12, // 2: admin.proto.Settings.services:type_name -> admin.proto.Settings.ServicesEntry
-	13, // 3: admin.proto.ServiceSettings.checkers:type_name -> admin.proto.ServiceSettings.CheckersEntry
-	14, // 4: admin.proto.ServiceSettings.sploits:type_name -> admin.proto.ServiceSettings.SploitsEntry
-	15, // 5: admin.proto.Rate.per:type_name -> google.protobuf.Duration
-	9,  // 6: admin.proto.CheckerSettings.check:type_name -> admin.proto.CheckSettings
-	10, // 7: admin.proto.CheckerSettings.get:type_name -> admin.proto.GetSettings
-	6,  // 8: admin.proto.RunOptions.rate:type_name -> admin.proto.Rate
-	8,  // 9: admin.proto.CheckSettings.run_options:type_name -> admin.proto.RunOptions
-	8,  // 10: admin.proto.GetSettings.run_options:type_name -> admin.proto.RunOptions
-	8,  // 11: admin.proto.SploitSettings.run_options:type_name -> admin.proto.RunOptions
-	5,  // 12: admin.proto.Settings.ServicesEntry.value:type_name -> admin.proto.ServiceSettings
-	7,  // 13: admin.proto.ServiceSettings.CheckersEntry.value:type_name -> admin.proto.CheckerSettings
-	11, // 14: admin.proto.ServiceSettings.SploitsEntry.value:type_name -> admin.proto.SploitSettings
-	0,  // 15: admin.proto.AdminService.SetSettings:input_type -> admin.proto.SetSettingsReq
-	2,  // 16: admin.proto.AdminService.GetSettings:input_type -> admin.proto.GetSettingsReq
-	1,  // 17: admin.proto.AdminService.SetSettings:output_type -> admin.proto.SetSettingsRsp
-	3,  // 18: admin.proto.AdminService.GetSettings:output_type -> admin.proto.GetSettingsRsp
-	17, // [17:19] is the sub-list for method output_type
-	15, // [15:17] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+var file_admin_proto_depIdxs = []int32{
+	4, // 0: admin.proto.SetSettingsReq.settings:type_name -> admin.proto.Settings
+	4, // 1: admin.proto.GetSettingsRsp.settings:type_name -> admin.proto.Settings
+	5, // 2: admin.proto.Settings.services:type_name -> admin.proto.ServiceSettings
+	7, // 3: admin.proto.ServiceSettings.checkers:type_name -> admin.proto.CheckerSettings
+	9, // 4: admin.proto.Rate.per:type_name -> google.protobuf.Duration
+	8, // 5: admin.proto.CheckerSettings.run_options:type_name -> admin.proto.RunOptions
+	6, // 6: admin.proto.RunOptions.rate:type_name -> admin.proto.Rate
+	0, // 7: admin.proto.AdminService.SetSettings:input_type -> admin.proto.SetSettingsReq
+	2, // 8: admin.proto.AdminService.GetSettings:input_type -> admin.proto.GetSettingsReq
+	1, // 9: admin.proto.AdminService.SetSettings:output_type -> admin.proto.SetSettingsRsp
+	3, // 10: admin.proto.AdminService.GetSettings:output_type -> admin.proto.GetSettingsRsp
+	9, // [9:11] is the sub-list for method output_type
+	7, // [7:9] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
-func init() { file_proto_admin_proto_init() }
-func file_proto_admin_proto_init() {
-	if File_proto_admin_proto != nil {
+func init() { file_admin_proto_init() }
+func file_admin_proto_init() {
+	if File_admin_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_admin_proto_rawDesc), len(file_proto_admin_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_admin_proto_rawDesc), len(file_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_admin_proto_goTypes,
-		DependencyIndexes: file_proto_admin_proto_depIdxs,
-		MessageInfos:      file_proto_admin_proto_msgTypes,
+		GoTypes:           file_admin_proto_goTypes,
+		DependencyIndexes: file_admin_proto_depIdxs,
+		MessageInfos:      file_admin_proto_msgTypes,
 	}.Build()
-	File_proto_admin_proto = out.File
-	file_proto_admin_proto_goTypes = nil
-	file_proto_admin_proto_depIdxs = nil
+	File_admin_proto = out.File
+	file_admin_proto_goTypes = nil
+	file_admin_proto_depIdxs = nil
 }

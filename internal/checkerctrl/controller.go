@@ -9,11 +9,10 @@ import (
 
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/internal/taskrunner"
-	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/pkg/raterunner"
+	"github.com/HazyCorp/govnilo/proto"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ type Controller struct {
 
 	checkers map[hazycheck.CheckerID]*checkerEntry
 
-	currentSettings atomic.Pointer[checkersettings.Settings]
+	currentSettings atomic.Pointer[proto.Settings]
 
 	rr *raterunner.RateRunner
 }
@@ -65,6 +64,8 @@ func New(in ControllerIn) (*Controller, error) {
 		runErrChan:       make(chan error, 1),
 		settingsProvider: in.SettingsProvider,
 	}
+
+	c.runCtx, c.runCancel = context.WithCancel(context.Background())
 
 	for _, checker := range in.Checkers {
 		checkerID := checker.CheckerID()
@@ -104,8 +105,8 @@ func (c *Controller) Start(ctx context.Context) error {
 	// 	return errors.Wrap(err, "cannot initially sync state")
 	// }
 
-	c.runCtx, c.runCancel = context.WithCancel(context.Background())
 	eg, ctx := errgroup.WithContext(c.runCtx)
+
 	eg.Go(func() error { return c.rr.Run(ctx) })
 	eg.Go(func() error { return c.run(ctx) })
 
@@ -152,6 +153,11 @@ func (c *Controller) run(ctx context.Context) error {
 	}
 }
 
+type settings struct {
+	target   string
+	settings *proto.CheckerSettings
+}
+
 func (c *Controller) genCheckerTask(
 	checker hazycheck.Checker,
 ) raterunner.TaskFunc {
@@ -161,27 +167,67 @@ func (c *Controller) genCheckerTask(
 	// Generate trace ID for debugging (automatically adds to hzlog context)
 	tracer := otel.Tracer("govnilo/checker")
 
+	var lastSettings atomic.Pointer[settings]
+
+	updLogger := l.With(
+		slog.String("component", "infra:checker-controller:settings-updater"),
+	)
+	updateSettings := func() {
+		currentSettings := c.currentSettings.Load()
+		if currentSettings == nil {
+			updLogger.Warn("current settings are not loaded yet")
+			return
+		}
+
+		servicesMap := serviceMap(currentSettings)
+		serviceSettings := servicesMap[checkerID.Service]
+		if serviceSettings == nil {
+			updLogger.Warn("cannot find service in current settings", slog.String("service", checkerID.Service))
+			return
+		}
+
+		target := serviceSettings.GetTarget()
+
+		checkersMap := checkersMap(serviceSettings.GetCheckers())
+		checkerSettings := checkersMap[checkerID.Name]
+		if checkerSettings == nil {
+			updLogger.Warn("cannot find checker in service settings", slog.String("checker", checkerID.Name), slog.String("service", checkerID.Service))
+			return
+		}
+
+		lastSettings.Store(&settings{
+			target:   target,
+			settings: checkerSettings,
+		})
+	}
+
+	go func() {
+		for {
+			updateSettings()
+
+			select {
+			case <-c.runCtx.Done():
+				updLogger.Info("got the ctx.Done() signal. stop.")
+				return
+			case <-time.After(time.Second):
+				// pass
+			}
+		}
+	}()
+
 	return func(ctx context.Context) error {
 		ctx, span := tracer.Start(ctx, "checker.Check")
 		defer span.End()
 
-		currentSettings := c.currentSettings.Load()
-		serviceSettings := currentSettings.Services[checkerID.Service]
-		if serviceSettings == nil {
-			return errors.Errorf("cannot find service %s in current settings", checkerID.Service)
+		s := lastSettings.Load()
+		if s == nil {
+			return hazycheck.InternalError(errors.Errorf("cannot load checker settings"))
 		}
-
-		span.SetAttributes(attribute.String("target", serviceSettings.Target))
 
 		l := hzlog.GetLogger(ctx, l).With(
-			slog.String("target", serviceSettings.Target),
+			slog.String("target", s.target),
 			slog.String("component", "business-infra:checker"),
 		)
-
-		checkerSettings := serviceSettings.Checkers[checkerID.Name]
-		if checkerSettings == nil {
-			return errors.Errorf("cannot find checker %s in %s service settings", checkerID.Name, checkerID.Service)
-		}
 
 		start := time.Now()
 		var checkErr error
@@ -222,18 +268,18 @@ func (c *Controller) genCheckerTask(
 
 				m.SuccessCheckCounter.Inc()
 				m.SuccessCheckDuration.UpdateDuration(start)
-				m.SuccessCheckPoints.Add(checkerSettings.Check.SuccessPoints)
+				m.SuccessCheckPoints.Add(s.settings.GetSuccessPoints())
 			} else {
 				l.DebugContext(ctx, "checker.Check run failed", hzlog.Error(checkErr))
 
 				m.FailCheckCounter.Inc()
 				m.FailCheckDuration.UpdateDuration(start)
-				m.FailCheckPenalty.Add(checkerSettings.Check.FailPenalty)
+				m.FailCheckPenalty.Add(s.settings.GetFailPenalty())
 			}
 		}()
 
 		l.DebugContext(ctx, "govnilo is running checker.Check")
-		checkErr = checker.Check(ctx, serviceSettings.Target)
+		checkErr = checker.Check(ctx, s.target)
 
 		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
 			cause := context.Cause(ctx)
@@ -259,11 +305,13 @@ func (c *Controller) syncState(ctx context.Context) error {
 	}
 
 	// MUSTHAVE!!!!
-	currentSettings.NormalizePoints()
+	normalizePoints(currentSettings)
 
 	c.currentSettings.Store(currentSettings)
 
 	var errlist *multierror.Error
+
+	servicesMap := serviceMap(currentSettings)
 
 	for checkerID, entry := range c.checkers {
 		l := c.l.With("checker_id", checkerID)
@@ -271,8 +319,8 @@ func (c *Controller) syncState(ctx context.Context) error {
 		svcName, checkerName := checkerID.Service, checkerID.Name
 
 		checkerExists := true
-		var svcDesc *checkersettings.ServiceSettings
-		var checkerDesc *checkersettings.CheckerSettings
+		var svcDesc *proto.ServiceSettings
+		var checkerDesc *proto.CheckerSettings
 
 		// using func here to avoid nil reference panics
 		// return allows us to skip block of code, if some internal
@@ -280,14 +328,15 @@ func (c *Controller) syncState(ctx context.Context) error {
 		func() {
 			var exists bool
 
-			svcDesc, exists = currentSettings.Services[svcName]
+			svcDesc, exists = servicesMap[svcName]
 			if !exists {
 				checkerExists = false
 				l.DebugContext(ctx, "checker doesn't exist in current settings, setting rate to zero")
 				return
 			}
 
-			checkerDesc, exists = svcDesc.Checkers[checkerName]
+			checkersMap := checkersMap(svcDesc.GetCheckers())
+			checkerDesc, exists = checkersMap[checkerName]
 			if !exists {
 				checkerExists = false
 				l.DebugContext(ctx, "checker doesn't exist in current settings, setting rate to zero")
@@ -299,12 +348,17 @@ func (c *Controller) syncState(ctx context.Context) error {
 			Rate: raterunner.ZeroRate,
 		}
 		if checkerExists {
-			checkOptions = raterunner.RunOptions{
-				Rate: raterunner.Rate{
-					Times: checkerDesc.Check.RunOptions.Rate.Times,
-					Per:   checkerDesc.Check.RunOptions.Rate.Per.AsDuration(),
-				},
-				MaxGoroutines: checkerDesc.Check.RunOptions.MaxGoroutines,
+			runOpts := checkerDesc.GetRunOptions()
+			if runOpts == nil {
+				checkOptions = raterunner.RunOptions{
+					Rate: raterunner.ZeroRate,
+				}
+			} else {
+				rate := runOpts.GetRate()
+				checkOptions = raterunner.RunOptions{
+					Rate:          protoRateToRaterunner(rate),
+					MaxGoroutines: int(runOpts.GetMaxGoroutines()),
+				}
 			}
 		}
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/proto"
 
 	"github.com/pkg/errors"
 )
@@ -28,7 +28,7 @@ func WithLogger(l *slog.Logger) ClientOpt {
 }
 
 type Client interface {
-	GetConfig(ctx context.Context) (*checkersettings.Settings, error)
+	GetConfig(ctx context.Context) (*proto.Settings, error)
 }
 
 type TransportConfig struct {

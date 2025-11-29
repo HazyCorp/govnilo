@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
+	"github.com/HazyCorp/govnilo/proto"
 )
 
 const (
@@ -24,7 +24,7 @@ type AsyncClientConfig struct {
 type AsyncClient struct {
 	c         AsyncClientConfig
 	inner     Client
-	lastState atomic.Pointer[checkersettings.Settings]
+	lastState atomic.Pointer[proto.Settings]
 	l         *slog.Logger
 }
 
@@ -80,7 +80,7 @@ func (c *AsyncClient) run() {
 	}
 }
 
-func (c *AsyncClient) GetConfig(ctx context.Context) (*checkersettings.Settings, error) {
+func (c *AsyncClient) GetConfig(ctx context.Context) (*proto.Settings, error) {
 	ptr := c.lastState.Load()
 	if ptr == nil {
 		return nil, errors.New("cannot get config asyncroniously, state is not known yet")

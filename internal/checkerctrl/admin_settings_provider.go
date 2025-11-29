@@ -6,7 +6,7 @@ import (
 
 	"github.com/HazyCorp/govnilo/internal/hazycheck"
 	"github.com/HazyCorp/govnilo/pkg/adminka/adminklient"
-	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
+	"github.com/HazyCorp/govnilo/proto"
 
 	"github.com/pkg/errors"
 	"go.uber.org/fx"
@@ -50,7 +50,7 @@ func NewAdminSettingsProvider(in AdminSettingsProviderIn) (*AdminSettingsProvide
 	}, nil
 }
 
-func (p *AdminSettingsProvider) GetSettings(ctx context.Context) (*checkersettings.Settings, error) {
+func (p *AdminSettingsProvider) GetSettings(ctx context.Context) (*proto.Settings, error) {
 	settings, err := p.client.GetConfig(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot pull settings from admin service")

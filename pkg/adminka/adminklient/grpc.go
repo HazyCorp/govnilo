@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/HazyCorp/govnilo/pkg/common/checkersettings"
 	"github.com/HazyCorp/govnilo/pkg/common/hzlog"
 	"github.com/HazyCorp/govnilo/proto"
 
@@ -42,12 +41,11 @@ func NewGRPC(c GRPCClientConfig, opts ...ClientOpt) (Client, error) {
 	return &GRPCClient{client: client, l: o.Logger}, nil
 }
 
-func (c *GRPCClient) GetConfig(ctx context.Context) (*checkersettings.Settings, error) {
+func (c *GRPCClient) GetConfig(ctx context.Context) (*proto.Settings, error) {
 	rsp, err := c.client.GetSettings(ctx, &proto.GetSettingsReq{})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get settings from grpc client")
 	}
 
-	settings := checkersettings.FromPB(rsp.GetSettings())
-	return settings, nil
+	return rsp.GetSettings(), nil
 }

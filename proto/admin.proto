@@ -28,13 +28,13 @@ message GetSettingsRsp {
 }
 
 message Settings {
-    map<string, ServiceSettings> services = 1;
+    repeated ServiceSettings services = 1;
 }
 
 message ServiceSettings {
-    string target = 1;
-    map<string, CheckerSettings> checkers = 2;
-    map<string, SploitSettings> sploits = 3;
+    string name = 1;
+    string target = 2;
+    repeated CheckerSettings checkers = 3;
 }
 
 message Rate {
@@ -43,27 +43,13 @@ message Rate {
 }
 
 message CheckerSettings {
-    CheckSettings check = 1;
-    GetSettings get = 2;
+    string name = 1;
+    RunOptions run_options = 2;
+    double success_points = 3;
+    double fail_penalty = 4;
 }
 
 message RunOptions {
     Rate rate = 1;
     int32 max_goroutines = 2;
-}
-
-message CheckSettings {
-    RunOptions run_options = 1;
-    double success_points = 2;
-    double fail_penalty = 3;
-}
-
-message GetSettings {
-    RunOptions run_options = 1;
-    double success_points = 2;
-    double fail_penalty = 3;
-}
-
-message SploitSettings {
-    RunOptions run_options = 1;
 }

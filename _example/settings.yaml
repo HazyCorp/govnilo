@@ -1,32 +1,20 @@
 services:
-  example:
+  - name: example
     target: 'example.service:8000'
     checkers:
-      sleeper-put:
-        check:
-          success_points: 1
-          fail_penalty: 1
-          run_options:
-            rate:
-              times: 1
-              per: 10s
-            max_goroutines: 0
-        get:
-          run_options:
-            rate:
-              times: 0
-              per: 1s
-      sleeper-retrieve:
-        check:
-          success_points: 1
-          fail_penalty: 1
-          run_options:
-            rate:
-              times: 1
-              per: 10s
-            max_goroutines: 0
-        get:
-          run_options:
-            rate:
-              times: 0
-              per: 1s
+      - name: sleeper-put
+        success_points: 1
+        fail_penalty: 1
+        run_options:
+          rate:
+            times: 1
+            per: 10s
+          max_goroutines: 0
+      - name: sleeper-retrieve
+        success_points: 1
+        fail_penalty: 1
+        run_options:
+          rate:
+            times: 1
+            per: 10s
+          max_goroutines: 0
